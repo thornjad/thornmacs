@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Copyright (C) 2014-2018 Free Software Foundation, Inc. -->
 <application>
- <id type="desktop">remacs.desktop</id>
+ <id type="desktop">lambda.desktop</id>
  <metadata_license>GFDL-1.3</metadata_license>
  <project_license>GPL-3.0+ and GFDL-1.3</project_license>
- <name>Remacs</name>
+ <name>Lambda</name>
  <summary>An extensible text editor</summary>
  <description>
   <p>
-   Remacs is an extensible, customizable text editor - and more.
+   Lambda is an extensible, customizable text editor - and more.
    At its core is an interpreter for Emacs Lisp, a dialect of the Lisp
    programming language with extensions to support text editing.
   </p>
-  <p>The features of Remacs include:</p>
+  <p>The features of Lambda include:</p>
   <ul>
    <li>Content-sensitive editing modes, including syntax coloring, for
    a wide-range of file types</li>
@@ -25,5 +25,5 @@
  </description>
  <screenshots>
  </screenshots>
- <url type="homepage">https://github.com/Wilfred/remacs</url>
+ <url type="homepage">https://gitlab.com/thornjad/lambda</url>
 </application>

@@ -1,10 +1,10 @@
-Emacs machines list
+Spacer machines list
 
+Copyright (C) 2019 Jade M Thornton
 Copyright (C) 1989-1990, 1992-1993, 1998, 2001-2018 Free Software
 Foundation, Inc.
-See the end of the file for license conditions.
 
-This is a list of the status of GNU Emacs on various machines and systems.
+This is a list of the status of Spacer on various machines and systems.
 
 Information about older releases, and platforms that are no longer
 supported, has been removed.  Consult older versions of this file if
@@ -17,32 +17,9 @@ elsewhere (eg Makefiles).
 If you add support for a new configuration, add a section to this
 file, and edit the 'configure.ac' source as needed.
 
-Some obsolete platforms are unsupported beginning with Emacs 23.1.  See
-the list at the end of this file.
-
-
 * Here are notes about some of the systems supported:
 
 ** GNU/Linux
-
-  Most of the complete systems which use the Linux kernel are close
-  enough to the GNU system to be considered variant GNU systems.  We
-  call them "Linux-based GNU systems," or GNU/Linux for short.
-
-  It is not coincidence that many of the other components used with
-  Linux--including GNU Emacs--were developed specifically for the GNU
-  project.  The GNU project was launched in 1984 to develop a free
-  complete Unix-like operating system.  To reach this goal, we had to
-  develop whatever system components were not available as freely
-  redistributable software from some other source.
-
-  The GNU project wants users of GNU/Linux systems to be aware of how
-  these systems relate to the GNU project, because that will help
-  spread the GNU idea that software should be free--and thus encourage
-  people to write more free software.  For more information, see
-  <https://www.gnu.org/gnu/linux-and-gnu.html>.
-
-*** 64-bit GNU/Linux
 
   No special procedures should be needed to build a 64-bit Emacs on a
   64-bit GNU/Linux system.  To build a 32-bit Emacs, first ensure that
@@ -58,11 +35,15 @@ the list at the end of this file.
 
   As of Emacs 21.2, a 31-bit only version is supported on this system.
 
+  NOTE: Support for this system will cease in the next major version of Spacer
+
 *** SuperH (sh[34]*-*-linux-gnu)
 
   Emacs 23.0.60 was reported to work on GNU/Linux (October 2008).
   This was tested on a little-endian sh4 system (cpu type SH7751R) running
   Gentoo Linux 2008.0.
+
+  NOTE: Support for this system will cease in the next major version of Spacer
 
 ** macOS
 
@@ -71,7 +52,10 @@ the list at the end of this file.
 
 ** Microsoft Windows
 
-  For installation instructions see the file nt/INSTALL.
+  For installation instructions see the file nt/INSTALL. MS-DOS is not
+  supported.
+
+  NOTE: Support for this system will cease in the next major version of Spacer
 
 ** Solaris
 
@@ -95,30 +79,4 @@ the list at the end of this file.
     ./configure CC='/usr/sfw/bin/gcc -m64'  # GCC
     ./configure CC='cc -m64'                # Solaris Studio
 
-
-* Obsolete platforms
-
-Support for many obsolete platforms was removed in Emacs 23.1.
-If for some reason you encounter an ancient machine where current
-Emacs does not compile, try an older release like Emacs 22.3.
-
-
-Local variables:
-mode: outline
-fill-prefix: "  "
-End:
-
-This file is part of GNU Emacs.
-
-GNU Emacs is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-GNU Emacs is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
+  NOTE: Support for this system will cease in the next major version of Spacer
