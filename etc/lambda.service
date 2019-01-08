@@ -3,8 +3,8 @@
 ## If you install this file by hand, change the "Exec" lines below
 ## to use absolute file names for the executables.
 [Unit]
-Description=remacs text editor
-Documentation=info:remacs man:emacs(1) https://gnu.org/software/emacs/
+Description=lambda text editor
+Documentation=info:lambda man:lambda(1) https://gnu.org/software/emacs/
 
 [Service]
 Type=simple

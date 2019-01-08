@@ -8,8 +8,8 @@ fi
 git_tree=$(git rev-parse --show-toplevel)
 
 docker run \
-       --mount src=${git_tree},target=/root/remacs,type=bind \
+       --mount src=${git_tree},target=/root/spacer,type=bind \
        --security-opt seccomp=unconfined \
-       --workdir '/root/remacs' \
+       --workdir '/root/spacer' \
        -it $1 \
        /bin/bash

@@ -1,6 +1,4 @@
-	GNU Emacs history, versions, and release dates
-
-For more details about release contents, see the NEWS* files.
+GNU Emacs, Remacs, Spacer history, versions, and release dates
 
 Most of the development history of GNU Emacs is available in its
 source code repository <https://savannah.gnu.org/git/?group=emacs>.
@@ -213,19 +211,3 @@ GNU Emacs 25.2 (2017-04-20) emacs-25.2
 
 GNU Emacs 25.3 (2017-09-11) emacs-25.3
 
-
-----------------------------------------------------------------------
-This file is part of GNU Emacs.
-
-GNU Emacs is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-GNU Emacs is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.

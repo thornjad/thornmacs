@@ -1,11 +1,11 @@
 version: '2'
 
 services:
-  remacs:
+  lambda:
     build:
       context: .
       dockerfile: docker/ubuntu/Dockerfile
-    image: remacs-build:latest
+    image: lambda-build:latest
     working_dir: ${PWD}
     tty: true
     # Unfortunately dumping doesn't work without this
