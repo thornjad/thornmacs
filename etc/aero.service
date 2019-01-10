@@ -3,13 +3,13 @@
 ## If you install this file by hand, change the "Exec" lines below
 ## to use absolute file names for the executables.
 [Unit]
-Description=lambda text editor
-Documentation=info:lambda man:lambda(1) https://gnu.org/software/emacs/
+Description=aero text editor
+Documentation=info:aero man:lambda(1) https://gnu.org/software/emacs/
 
 [Service]
 Type=simple
-ExecStart=remacs --fg-daemon
-ExecStop=remacsclient --eval "(kill-emacs)"
+ExecStart=aero --fg-daemon
+ExecStop=aeroclient --eval "(kill-emacs)"
 Environment=SSH_AUTH_SOCK=%t/keyring/ssh
 Restart=on-failure
 
