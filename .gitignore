@@ -22,6 +22,8 @@
 # file does not rely on "**" in patterns.  The "**" feature was added
 # in Git 1.8.2 (March 2013).
 
+# Staging for upstream patches
+admin/upstream/
 
 # Built by 'autogen.sh'.
 /aclocal.m4
@@ -162,7 +164,6 @@ GTAGS
 ID
 
 # Executables.
-*.exe
 a.out
 lib-src/blessmail
 lib-src/ctags
@@ -259,26 +260,6 @@ etc/emacs.tmpdesktop
 
 # Distribution directories.
 /emacs-[1-9]*/
-
-# Microsoft-related builds and installations.
-*.in-h
-_*
-!lib/_Noreturn.h
-/bin/
-/BIN/
-/data/
-etc/icons/
-lib/cxxdefs.h
-lib/SYS/
-/libexec/
-/lock/
-/README.W32
-/share/
-/site-lisp/
-nt/emacs.rc
-nt/emacsclient.rc
-src/gdb.ini
-/var/
 
 # GDB
 .gdb_history
