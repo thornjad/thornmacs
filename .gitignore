@@ -22,9 +22,6 @@
 # file does not rely on "**" in patterns.  The "**" feature was added
 # in Git 1.8.2 (March 2013).
 
-# Staging for upstream patches
-admin/upstream/
-
 # Built by 'autogen.sh'.
 /aclocal.m4
 /configure
