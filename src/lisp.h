@@ -94,23 +94,6 @@ typedef long long int EMACS_INT;
 typedef unsigned long long int EMACS_UINT;
 enum { EMACS_INT_WIDTH = LLONG_WIDTH, EMACS_UINT_WIDTH = ULLONG_WIDTH };
 #  define EMACS_INT_MAX LLONG_MAX
-/* MinGW supports %lld only if __USE_MINGW_ANSI_STDIO is non-zero,
-   which is arranged by config.h, and (for mingw.org) if GCC is 6.0 or
-   later and the runtime version is 5.0.0 or later.  Otherwise,
-   printf-like functions are declared with __ms_printf__ attribute,
-   which will cause a warning for %lld etc.  */
-#  if defined __MINGW32__						\
-  && (!defined __USE_MINGW_ANSI_STDIO					\
-      || (!defined MINGW_W64						\
-	  && !(GNUC_PREREQ (6, 0, 0) && __MINGW32_MAJOR_VERSION >= 5)))
-#   define pI "I64"
-#  else	 /* ! MinGW */
-#   define pI "ll"
-#  endif
-# else
-#  error "INTPTR_MAX too large"
-# endif
-#endif
 
 /* Number of bits to put in each character in the internal representation
    of bool vectors.  This should not vary across implementations.  */
