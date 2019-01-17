@@ -323,18 +323,17 @@ OPTION_DEFAULT_OFF([modules],[compile with dynamic modules support])
 OPTION_DEFAULT_ON([threads],[don't compile with elisp threading support])
 
 AC_ARG_WITH([file-notification],[AS_HELP_STRING([--with-file-notification=LIB],
- [use a file notification library (LIB one of: yes, inotify, kqueue, gfile, w32, no)])],
+ [use a file notification library (LIB one of: yes, inotify, kqueue, gfile, no)])],
  [ case "${withval}" in
     y | ye | yes )	val=yes ;;
     n | no )		val=no  ;;
     i | in | ino | inot | inoti | inotif | inotify )	val=inotify ;;
     k | kq | kqu | kque | kqueu | kqueue )	val=kqueue ;;
     g | gf | gfi | gfil | gfile )	val=gfile ;;
-    w | w3 | w32 )	val=w32 ;;
     * ) AC_MSG_ERROR(['--with-file-notification=$withval' is invalid;
-this option's value should be 'yes', 'no', 'inotify', 'kqueue', 'gfile' or 'w32'.
-'yes' is a synonym for 'w32' on MS-Windows, for 'no' on Nextstep,
-otherwise for the first of 'inotify', 'kqueue' or 'gfile' that is usable.])
+this option's value should be 'yes', 'no', 'inotify', 'kqueue', or 'gfile'.
+'yes' is a synonym for 'no' on Nextstep, otherwise for the first of
+'inotify', 'kqueue' or 'gfile' that is usable.])
     ;;
    esac
    with_file_notification=$val
@@ -577,6 +576,7 @@ case "${canonical}" in
   ## Cygwin ports
   *-*-cygwin )
     opsys=cygwin
+    AC_MSG_ERROR([Aero does not support Microsoft Windows])
   ;;
 
   ## HP 9000 series 700 and 800, running HP/UX
@@ -666,8 +666,7 @@ case "${canonical}" in
     case "${canonical}" in
       *-mingw* )
 		opsys=mingw32
-		# MinGW overrides and adds some system headers in nt/inc.
-		GCC_TEST_OPTIONS="-I $srcdir/nt/inc"
+		AC_MSG_ERROR([Aero does not support Microsoft Windows])
 		;;
       ## Otherwise, we'll fall through to the generic opsys code at the bottom.
     esac
@@ -1206,10 +1205,6 @@ with the '--without-makeinfo' option to build without the manuals.] )
 fi
 AC_SUBST([MAKEINFO])
 AC_SUBST(HAVE_MAKEINFO)
-
-   DOCMISC_W32=
-fi
-AC_SUBST(DOCMISC_W32)
 
 dnl Add our options to ac_link now, after it is set up.
 
@@ -1894,17 +1889,10 @@ if test "${HAVE_NS}" = yes; then
   fi
 fi
 
-HAVE_W32=no
-W32_OBJ=
-W32_LIBS=
 EMACSRES=
 CLIENTRES=
 CLIENTW=
-W32_RES_LINK=
 EMACS_MANIFEST=
-if test "${with_w32}" != no; then
-  AC_MSG_ERROR([Using w32 is not supported.])
-fi
 
 FIRSTFILE_OBJ=
 NTDIR=
@@ -1925,11 +1913,6 @@ AC_SUBST(LIBS_ECLIENT)
 AC_SUBST(LIB_WSOCK32)
 AC_SUBST(NTLIB)
 AC_SUBST(XARGS_LIMIT)
-
-if test "${HAVE_W32}" = "yes"; then
-  window_system=w32
-  with_xft=no
-fi
 
 ## $window_system is now set to the window system we will
 ## ultimately use.
@@ -1963,9 +1946,6 @@ dnl use the toolkit if we have gtk, or X11R5 or newer.
   ;;
   nextstep )
     term_header=nsterm.h
-  ;;
-  w32 )
-    term_header=w32term.h
   ;;
 esac
 
@@ -2304,7 +2284,7 @@ if test "${HAVE_X11}" = "yes" || test "${HAVE_NS}" = "yes"; then
 fi
 
 HAVE_IMAGEMAGICK=no
-if test "${HAVE_X11}" = "yes" || test "${HAVE_NS}" = "yes" || test "${HAVE_W32}" = "yes"; then
+if test "${HAVE_X11}" = "yes" || test "${HAVE_NS}" = "yes"; then
   if test "${with_imagemagick}" != "no"; then
     if test -n "$BREW"; then
       # Homebrew doesn't link ImageMagick 6 by default, so make sure
@@ -3148,7 +3128,7 @@ PNG_CFLAGS=
 if test "${NS_IMPL_COCOA}" = yes; then
   : # Cocoa provides its own png support, so do nothing.
 elif test "${with_png}" != no; then
-  if test "${HAVE_X11}" = "yes" || test "${HAVE_W32}" = "yes"; then
+  if test "${HAVE_X11}" = "yes"; then
     EMACS_CHECK_MODULES([PNG], [libpng >= 1.0.0])
     if test $HAVE_PNG = yes; then
       LIBPNG=$PNG_LIBS
@@ -4313,7 +4293,6 @@ esac
 
 dnl Define symbols to identify the version of Unix this is.
 dnl Define all the symbols that apply correctly.
-AH_TEMPLATE(DOS_NT, [Define if the system is MS DOS or MS Windows.])
 AH_TEMPLATE(USG, [Define if the system is compatible with System III.])
 AH_TEMPLATE(USG5_4, [Define if the system is compatible with System V Release 4.])
 
@@ -4648,14 +4627,6 @@ case "${opsys}" in
     	REMACSLIB_NAME="libremacs_lib.a"
         REMACSLIB_CFLAGS="-pthread" ;;
 esac
-
-if test "${HAVE_W32}" = "yes"; then
-    REMACSLIB_NAME="remacs_lib.lib"
-    RUST_DEPS="$RUST_DEPS -lws2_32 -luserenv"
-
-    # Windows fails linking in the 'cargo test' stage, skip for now.
-    CARGO_TEST="true"
-fi
 
 LIB_REMACS="$RUST_DEPS"
 
