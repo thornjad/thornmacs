@@ -95,10 +95,6 @@ static bool valgrind_p;
 #ifdef USE_GTK
 # include "gtkutil.h"
 #endif
-#ifdef WINDOWSNT
-#include "w32.h"
-#include "w32heap.h"	/* for sbrk */
-#endif
 
 #ifdef GNU_LINUX
 /* The address where the heap starts.  */
@@ -5127,10 +5123,6 @@ c_symbol_p (struct Lisp_Symbol *sym)
 static int
 valid_pointer_p (void *p)
 {
-#ifdef WINDOWSNT
-  return w32_valid_pointer_p (p, 16);
-#else
-
   if (ADDRESS_SANITIZER)
     return p ? -1 : 0;
 
@@ -5150,7 +5142,6 @@ valid_pointer_p (void *p)
     }
 
   return -1;
-#endif
 }
 
 /* Return 2 if OBJ is a killed or special buffer object, 1 if OBJ is a
@@ -7098,18 +7089,7 @@ or memory information can't be obtained, return nil.  */)
 		 (uintmax_t) si.freeram * units / 1024,
 		 (uintmax_t) si.totalswap * units / 1024,
 		 (uintmax_t) si.freeswap * units / 1024);
-#elif defined WINDOWSNT
-  unsigned long long totalram, freeram, totalswap, freeswap;
-
-  if (w32_memory_info (&totalram, &freeram, &totalswap, &freeswap) == 0)
-    return list4i ((uintmax_t) totalram / 1024,
-		   (uintmax_t) freeram / 1024,
-		   (uintmax_t) totalswap / 1024,
-		   (uintmax_t) freeswap / 1024);
-  else
-    return Qnil;
 #else
-  /* FIXME: add more systems.  */
   return Qnil;
 #endif
 }
