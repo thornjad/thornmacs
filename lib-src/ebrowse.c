@@ -50,11 +50,7 @@ streq (char const *x, char const *y)
 static bool
 filename_eq (char const *x, char const *y)
 {
-#ifdef WINDOWSNT
-  return stricmp (x, y) == 0;
-#else
   return streq (x, y);
-#endif
 }
 
 /* The default output file name.  */

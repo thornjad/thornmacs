@@ -47,22 +47,6 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include <min-max.h>
 #include <unlocked-io.h>
 
-#ifdef WINDOWSNT
-/* Defined to be sys_fopen in ms-w32.h, but only #ifdef emacs, so this
-   is really just insurance.  */
-#undef fopen
-#include <direct.h>
-#endif /* WINDOWSNT */
-
-#ifdef DOS_NT
-/* Defined to be sys_chdir in ms-w32.h, but only #ifdef emacs, so this
-   is really just insurance.  */
-#undef chdir
-#define IS_SLASH(c)  ((c) == '/' || (c) == '\\' || (c) == ':')
-#else  /* not DOS_NT */
-#define IS_SLASH(c)  ((c) == '/')
-#endif /* not DOS_NT */
-
 static void scan_file (char *filename);
 static void scan_lisp_file (const char *filename, const char *mode);
 static void scan_c_file (char *filename, const char *mode);

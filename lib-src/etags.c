@@ -90,22 +90,6 @@ char pot_etags_version[] = "@(#) pot revision number is 17.38.1.4";
 
 #include <config.h>
 
-/* WIN32_NATIVE is for XEmacs.
-   WINDOWSNT, DOS_NT are for Emacs. */
-#ifdef WIN32_NATIVE
-# undef  WINDOWSNT
-# define WINDOWSNT
-#endif /* WIN32_NATIVE */
-
-#ifdef WINDOWSNT
-# include <direct.h>
-# undef HAVE_NTGUI
-# undef  DOS_NT
-# define DOS_NT
-/* The WINDOWSNT build doesn't use Gnulib's fcntl.h.  */
-# define O_CLOEXEC O_NOINHERIT
-#endif /* WINDOWSNT */
-
 #include <limits.h>
 #include <unistd.h>
 #include <stdarg.h>

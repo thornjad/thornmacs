@@ -48,10 +48,6 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 
 #include <unlocked-io.h>
 
-#ifdef WINDOWSNT
-#include "ntlib.h"
-#endif
-
 #include "remacs-lib.h"
 
 #ifndef min
