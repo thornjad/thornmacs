@@ -45,10 +45,6 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include "frame.h"
 #include "xwidget.h"
 
-#ifdef WINDOWSNT
-#include "w32heap.h"		/* for mmap_* */
-#endif
-
 /* File and lookahead for get-file-char and get-emacs-mule-file-char
    to read from.  Used by Fload.  */
 struct infile *infile;
@@ -4081,8 +4077,7 @@ evaporate_overlays (ptrdiff_t pos)
 			 Allocation with mmap
  ***********************************************************************/
 
-/* Note: WINDOWSNT implements this stuff on w32heap.c.  */
-#if defined USE_MMAP_FOR_BUFFERS && !defined WINDOWSNT
+#if defined USE_MMAP_FOR_BUFFERS
 
 #include <sys/mman.h>
 
@@ -4748,16 +4743,10 @@ init_buffer (int initialized)
     {
       struct buffer *b;
 
-#ifndef WINDOWSNT
       /* These must be reset in the dumped Emacs, to avoid stale
-	 references to mmap'ed memory from before the dump.
-
-	 WINDOWSNT doesn't need this because it doesn't track mmap'ed
-	 regions by hand (see w32heap.c, which uses system APIs for
-	 that purpose), and thus doesn't use mmap_regions.  */
+	 references to mmap'ed memory from before the dump. */
       mmap_regions = NULL;
       mmap_fd = -1;
-#endif
 
       /* The dumped buffers reference addresses of buffer text
 	 recorded by temacs, that cannot be used by the dumped Emacs.
