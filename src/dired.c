@@ -42,36 +42,10 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include "coding.h"
 #include "regex.h"
 
-#ifdef WINDOWSNT
-extern int is_slow_fs (const char *);
-#endif
-
 static ptrdiff_t scmp (const char *, const char *, ptrdiff_t);
 static Lisp_Object file_attributes_static (int, char const *, Lisp_Object,
 					   Lisp_Object, Lisp_Object);
 
-#ifndef WINDOWSNT
-extern Lisp_Object file_attributes(Lisp_Object, Lisp_Object);
-
-extern Lisp_Object file_attributes_rust_internal (Lisp_Object,
-						  Lisp_Object,
-						  Lisp_Object);
-
-Lisp_Object file_attributes_c_internal (char const *,
-					Lisp_Object,
-					Lisp_Object,
-					Lisp_Object);
-Lisp_Object filemode_string(Lisp_Object);
-#endif
-
-#ifdef WINDOWSNT
-Lisp_Object directory_files_c(Lisp_Object, Lisp_Object, Lisp_Object,
-			      Lisp_Object);
-Lisp_Object directory_files_and_attributes_c(Lisp_Object, Lisp_Object,
-					     Lisp_Object, Lisp_Object,
-					     Lisp_Object);
-Lisp_Object file_attributes_c(Lisp_Object, Lisp_Object);
-#endif
 
 /* Return the number of bytes in DP's name.  */
 static ptrdiff_t
@@ -106,42 +80,18 @@ open_directory (Lisp_Object dirname, int *fdp)
   DIR *d;
   int fd, opendir_errno;
 
-#ifdef DOS_NT
   /* Directories cannot be opened.  The emulation assumes that any
      file descriptor other than AT_FDCWD corresponds to the most
      recently opened directory.  This hack is good enough for Emacs.  */
   fd = 0;
   d = opendir (name);
   opendir_errno = errno;
-#else
-  fd = emacs_open (name, O_RDONLY | O_DIRECTORY, 0);
-  if (fd < 0)
-    {
-      opendir_errno = errno;
-      d = 0;
-    }
-  else
-    {
-      d = fdopendir (fd);
-      opendir_errno = errno;
-      if (! d)
-	emacs_close (fd);
-    }
-#endif
 
   if (!d)
     report_file_errno ("Opening directory", dirname, opendir_errno);
   *fdp = fd;
   return d;
 }
-
-#ifdef WINDOWSNT
-static void
-directory_files_internal_w32_unwind (Lisp_Object arg)
-{
-  Vw32_get_true_file_attributes = arg;
-}
-#endif
 
 static void
 directory_files_internal_unwind (void *d)
@@ -164,238 +114,11 @@ read_dirent (DIR *dir, Lisp_Object dirname)
 	return dp;
       if (! (errno == EAGAIN || errno == EINTR))
 	{
-#ifdef WINDOWSNT
-	  /* The MS-Windows implementation of 'opendir' doesn't
-	     actually open a directory until the first call to
-	     'readdir'.  If 'readdir' fails to open the directory, it
-	     sets errno to ENOENT or EACCES, see w32.c.  */
-	  if (errno == ENOENT || errno == EACCES)
-	    report_file_error ("Opening directory", dirname);
-#endif
 	  report_file_error ("Reading directory", dirname);
 	}
       maybe_quit ();
     }
 }
-
-/* Function shared by Fdirectory_files and Fdirectory_files_and_attributes.
-   If not ATTRS, return a list of directory filenames;
-   if ATTRS, return a list of directory filenames and their attributes.
-   In the latter case, pass ID_FORMAT to file_attributes.  */
-
-#ifdef WINDOWSNT
-Lisp_Object
-directory_files_internal (Lisp_Object directory, Lisp_Object full,
-			  Lisp_Object match, Lisp_Object nosort, bool attrs,
-			  Lisp_Object id_format)
-{
-  ptrdiff_t directory_nbytes;
-  Lisp_Object list, dirfilename, encoded_directory;
-  struct re_pattern_buffer *bufp = NULL;
-  bool needsep = 0;
-  ptrdiff_t count = SPECPDL_INDEX ();
-#ifdef WINDOWSNT
-  Lisp_Object w32_save = Qnil;
-#endif
-
-  /* Don't let the compiler optimize away all copies of DIRECTORY,
-     which would break GC; see Bug#16986.  */
-  Lisp_Object volatile directory_volatile = directory;
-
-  /* Because of file name handlers, these functions might call
-     Ffuncall, and cause a GC.  */
-  list = encoded_directory = dirfilename = Qnil;
-  dirfilename = Fdirectory_file_name (directory);
-
-  if (!NILP (match))
-    {
-      CHECK_STRING (match);
-
-      /* MATCH might be a flawed regular expression.  Rather than
-	 catching and signaling our own errors, we just call
-	 compile_pattern to do the work for us.  */
-      /* Pass 1 for the MULTIBYTE arg
-	 because we do make multibyte strings if the contents warrant.  */
-# ifdef WINDOWSNT
-      /* Windows users want case-insensitive wildcards.  */
-      bufp = compile_pattern (match, 0,
-			      BVAR (&buffer_defaults, case_canon_table), 0, 1);
-# else	/* !WINDOWSNT */
-      bufp = compile_pattern (match, 0, Qnil, 0, 1);
-# endif	 /* !WINDOWSNT */
-    }
-
-  /* Note: ENCODE_FILE and DECODE_FILE can GC because they can run
-     run_pre_post_conversion_on_str which calls Lisp directly and
-     indirectly.  */
-  dirfilename = ENCODE_FILE (dirfilename);
-  encoded_directory = ENCODE_FILE (directory);
-
-  /* Now *bufp is the compiled form of MATCH; don't call anything
-     which might compile a new regexp until we're done with the loop!  */
-
-  int fd;
-  DIR *d = open_directory (dirfilename, &fd);
-
-  /* Unfortunately, we can now invoke expand-file-name and
-     file-attributes on filenames, both of which can throw, so we must
-     do a proper unwind-protect.  */
-  record_unwind_protect_ptr (directory_files_internal_unwind, d);
-
-#ifdef WINDOWSNT
-  if (attrs)
-    {
-      /* Do this only once to avoid doing it (in w32.c:stat) for each
-	 file in the directory, when we call file_attributes below.  */
-      record_unwind_protect (directory_files_internal_w32_unwind,
-			     Vw32_get_true_file_attributes);
-      w32_save = Vw32_get_true_file_attributes;
-      if (EQ (Vw32_get_true_file_attributes, Qlocal))
-	{
-	  /* w32.c:stat will notice these bindings and avoid calling
-	     GetDriveType for each file.  */
-	  if (is_slow_fs (SSDATA (dirfilename)))
-	    Vw32_get_true_file_attributes = Qnil;
-	  else
-	    Vw32_get_true_file_attributes = Qt;
-	}
-    }
-#endif
-
-  directory_nbytes = SBYTES (directory);
-  re_match_object = Qt;
-
-  /* Decide whether we need to add a directory separator.  */
-  if (directory_nbytes == 0
-      || !IS_ANY_SEP (SREF (directory, directory_nbytes - 1)))
-    needsep = 1;
-
-  /* Loop reading directory entries.  */
-  for (struct dirent *dp; (dp = read_dirent (d, directory)); )
-    {
-      ptrdiff_t len = dirent_namelen (dp);
-      Lisp_Object name = make_unibyte_string (dp->d_name, len);
-      Lisp_Object finalname = name;
-
-      /* Note: DECODE_FILE can GC; it should protect its argument,
-	 though.  */
-      name = DECODE_FILE (name);
-      len = SBYTES (name);
-
-      /* Now that we have unwind_protect in place, we might as well
-	 allow matching to be interrupted.  */
-      maybe_quit ();
-
-      bool wanted = (NILP (match)
-		     || re_search (bufp, SSDATA (name), len, 0, len, 0) >= 0);
-
-      if (wanted)
-	{
-	  if (!NILP (full))
-	    {
-	      Lisp_Object fullname;
-	      ptrdiff_t nbytes = len + directory_nbytes + needsep;
-	      ptrdiff_t nchars;
-
-	      fullname = make_uninit_multibyte_string (nbytes, nbytes);
-	      memcpy (SDATA (fullname), SDATA (directory),
-		      directory_nbytes);
-
-	      if (needsep)
-		SSET (fullname, directory_nbytes, DIRECTORY_SEP);
-
-	      memcpy (SDATA (fullname) + directory_nbytes + needsep,
-		      SDATA (name), len);
-
-	      nchars = multibyte_chars_in_text (SDATA (fullname), nbytes);
-
-	      /* Some bug somewhere.  */
-	      if (nchars > nbytes)
-		emacs_abort ();
-
-	      STRING_SET_CHARS (fullname, nchars);
-	      if (nchars == nbytes)
-		STRING_SET_UNIBYTE (fullname);
-
-	      finalname = fullname;
-	    }
-	  else
-	    finalname = name;
-
-	  if (attrs)
-	    {
-#ifdef WINDOWSNT
-	      Lisp_Object fileattrs
-		= file_attributes_static (fd, dp->d_name, directory, name, id_format);
-#else
-	      Lisp_Object fileattrs
-		= file_attributes_rust_internal (directory, name, id_format);
-#endif
-	      list = Fcons (Fcons (finalname, fileattrs), list);
-	    }
-	  else
-	    list = Fcons (finalname, list);
-	}
-    }
-
-  closedir (d);
-#ifdef WINDOWSNT
-  if (attrs)
-    Vw32_get_true_file_attributes = w32_save;
-#endif
-
-  /* Discard the unwind protect.  */
-  specpdl_ptr = specpdl + count;
-
-  if (NILP (nosort))
-    list = Fsort (Fnreverse (list),
-		  attrs ? Qfile_attributes_lessp : Qstring_lessp);
-
-  (void) directory_volatile;
-  return list;
-}
-#endif /* WINDOWSNT*/
-
-#ifdef WINDOWSNT
-Lisp_Object
-directory_files_c(Lisp_Object directory, Lisp_Object full,
-		  Lisp_Object match, Lisp_Object nosort)
-{
-  Lisp_Object handler;
-  directory = Fexpand_file_name (directory, Qnil);
-
-  /* If the file name has special constructs in it,
-     call the corresponding file handler.  */
-  handler = Ffind_file_name_handler (directory, Qdirectory_files);
-  if (!NILP (handler))
-    return call5 (handler, Qdirectory_files, directory,
-                  full, match, nosort);
-
-  return directory_files_internal (directory, full, match, nosort, false, Qnil);
-}
-#endif
-
-#ifdef WINDOWSNT
-Lisp_Object
-directory_files_and_attributes_c(Lisp_Object directory, Lisp_Object full,
-				 Lisp_Object match, Lisp_Object nosort,
-				 Lisp_Object id_format)
-{
-  Lisp_Object handler;
-  directory = Fexpand_file_name (directory, Qnil);
-
-  /* If the file name has special constructs in it,
-     call the corresponding file handler.  */
-  handler = Ffind_file_name_handler (directory, Qdirectory_files_and_attributes);
-  if (!NILP (handler))
-    return call6 (handler, Qdirectory_files_and_attributes,
-                  directory, full, match, nosort, id_format);
-
-  return directory_files_internal (directory, full, match, nosort,
-				   true, id_format);
-}
-#endif
-
 
 
 static Lisp_Object file_name_completion (Lisp_Object, Lisp_Object, bool,
@@ -838,63 +561,24 @@ file_name_completion_dirp (int fd, struct dirent *dp, ptrdiff_t len)
 static char *
 stat_uname (struct stat *st)
 {
-#ifdef WINDOWSNT
-  return st->st_uname;
-#else
   struct passwd *pw = getpwuid (st->st_uid);
 
   if (pw)
     return pw->pw_name;
   else
     return NULL;
-#endif
 }
 
 static char *
 stat_gname (struct stat *st)
 {
-#ifdef WINDOWSNT
-  return st->st_gname;
-#else
   struct group *gr = getgrgid (st->st_gid);
 
   if (gr)
     return gr->gr_name;
   else
     return NULL;
-#endif
 }
-
-#ifdef WINDOWSNT
-Lisp_Object
-file_attributes_c(Lisp_Object filename, Lisp_Object id_format)
-{
-  Lisp_Object encoded;
-  Lisp_Object handler;
-
-  filename = internal_condition_case_2 (Fexpand_file_name, filename, Qnil,
-					Qt, Fidentity);
-  if (!STRINGP (filename))
-    return Qnil;
-
-  /* If the file name has special constructs in it,
-     call the corresponding file handler.  */
-  handler = Ffind_file_name_handler (filename, Qfile_attributes);
-  if (!NILP (handler))
-    { /* Only pass the extra arg if it is used to help backward compatibility
-	 with old file handlers which do not implement the new arg.  --Stef  */
-      if (NILP (id_format))
-	return call2 (handler, Qfile_attributes, filename);
-      else
-	return call3 (handler, Qfile_attributes, filename, id_format);
-    }
-
-  encoded = ENCODE_FILE (filename);
-  return file_attributes_static (AT_FDCWD, SSDATA (encoded), Qnil, filename,
-				 id_format);
-}
-#endif /* WINDOWSNT */
-
 
 static Lisp_Object
 file_attributes_static (int fd, char const *name,
@@ -939,18 +623,8 @@ file_attributes_static (int fd, char const *name,
 
   if (err == EINVAL)
     {
-#ifdef WINDOWSNT
-      /* We usually don't request accurate owner and group info,
-	 because it can be expensive on Windows to get that, and most
-	 callers of 'lstat' don't need that.  But here we do want that
-	 information to be accurate.  */
-      w32_stat_get_owner_group = 1;
-#endif
       if (fstatat (fd, name, &s, AT_SYMLINK_NOFOLLOW) == 0)
 	err = 0;
-#ifdef WINDOWSNT
-      w32_stat_get_owner_group = 0;
-#endif
     }
 
   if (err != 0)
@@ -1007,7 +681,6 @@ file_attributes_static (int fd, char const *name,
 		INTEGER_TO_CONS (s.st_dev));
 }
 
-#ifndef WINDOWSNT
 Lisp_Object
 file_attributes_c_internal (char const *name,
 			    Lisp_Object dirname, Lisp_Object filename,
@@ -1017,10 +690,8 @@ file_attributes_c_internal (char const *name,
 				dirname, filename,
 				id_format);
 }
-#endif /* !WINDOWSNT */
 
 
-#ifndef WINDOWSNT
 /*
  * (temp) Filemode support for Remacs
  */
@@ -1031,7 +702,7 @@ filemode_string_core (int fd, char const *name)
   struct stat s;
   int lstat_result;
 
-  /* An array to hold the mode string generated by filemodestring, 
+  /* An array to hold the mode string generated by filemodestring,
      including its terminating space and null byte.  */
   char modes[sizeof "-rwxr-xr-x "];
 
@@ -1056,7 +727,6 @@ filemode_string (Lisp_Object filename)
   encoded = ENCODE_FILE (filename);
   return filemode_string_core (AT_FDCWD, SSDATA (encoded));
 }
-#endif /* !WINDOWSNT */
 
 DEFUN ("system-groups", Fsystem_groups, Ssystem_groups, 0, 0, 0,
        doc: /* Return a list of user group names currently registered in the system.
