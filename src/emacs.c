@@ -34,24 +34,6 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include "lisp.h"
 #include "sysstdio.h"
 
-#ifdef WINDOWSNT
-#include <fcntl.h>
-#include <sys/socket.h>
-#include <mbstring.h>
-#include "w32.h"
-#include "w32heap.h"
-#endif
-
-#if defined WINDOWSNT || defined HAVE_NTGUI
-#include "w32select.h"
-#include "w32font.h"
-#include "w32common.h"
-#endif
-
-#if defined CYGWIN
-#include "cygw32.h"
-#endif
-
 #ifdef HAVE_LIBSYSTEMD
 # include <systemd/sd-daemon.h>
 # include <sys/socket.h>
@@ -115,11 +97,6 @@ static const char emacs_bugreport[] = PACKAGE_BUGREPORT;
 /* Empty lisp strings.  To avoid having to build any others.  */
 Lisp_Object empty_unibyte_string, empty_multibyte_string;
 
-#ifdef WINDOWSNT
-/* Cache for externally loaded libraries.  */
-Lisp_Object Vlibrary_cache;
-#endif
-
 /* Set after Emacs has started up the first time.
    Prevents reinitialization of the Lisp world and keymaps
    on subsequent starts.  */
@@ -182,13 +159,10 @@ static char *daemon_name;
 /* 0 not a daemon, 1 new-style (foreground), 2 old-style (background).  */
 int daemon_type;
 
-#ifndef WINDOWSNT
 /* Pipe used to send exit notification to the background daemon parent at
-   startup.  On Windows, we use a kernel event instead.  */
+   startup.  */
 static int daemon_pipe[2];
-#else
 HANDLE w32_daemon_event;
-#endif
 
 /* Save argv and argc.  */
 char **initial_argv;
@@ -405,20 +379,7 @@ init_cmdargs (int argc, char **argv, int skip_args, char *original_pwd)
   initial_argv = argv;
   initial_argc = argc;
 
-#ifdef WINDOWSNT
-  /* Must use argv[0] converted to UTF-8, as it begets many standard
-     file and directory names.  */
-  {
-    char argv0[MAX_UTF8_PATH];
-
-    if (filename_from_ansi (argv[0], argv0) == 0)
-      raw_name = build_unibyte_string (argv0);
-    else
-      raw_name = build_unibyte_string (argv[0]);
-  }
-#else
   raw_name = build_unibyte_string (argv[0]);
-#endif
 
   /* Add /: to the front of the name
      if it would otherwise be treated as magic.  */
@@ -466,16 +427,6 @@ init_cmdargs (int argc, char **argv, int skip_args, char *original_pwd)
         Vinvocation_directory = call1 (Qfile_truename, Vinvocation_directory);
 
       dir = Vinvocation_directory;
-#ifdef WINDOWSNT
-      /* If we are running from the build directory, set DIR to the
-	 src subdirectory of the Emacs tree, like on Posix
-	 platforms.  */
-      if (SBYTES (dir) > sizeof ("/i386/") - 1
-	  && 0 == strcmp (SSDATA (dir) + SBYTES (dir) - sizeof ("/i386/") + 1,
-			  "/i386/"))
-	dir = Fexpand_file_name (build_string ("../.."), dir);
-#else  /* !WINDOWSNT */
-#endif
       name = Fexpand_file_name (Vinvocation_name, dir);
       while (1)
 	{
@@ -696,23 +647,6 @@ main (int argc, char **argv)
 # endif
 #endif
 
-#if defined WINDOWSNT || defined HAVE_NTGUI
-  /* Set global variables used to detect Windows version.  Do this as
-     early as possible.  (unexw32.c calls this function as well, but
-     the additional call here is harmless.) */
-  cache_system_info ();
-#ifdef WINDOWSNT
-  /* On Windows 9X, we have to load UNICOWS.DLL as early as possible,
-     to have non-stub implementations of APIs we need to convert file
-     names between UTF-8 and the system's ANSI codepage.  */
-  maybe_load_unicows_dll ();
-  /* Initialize the codepage for file names, needed to decode
-     non-ASCII file names during startup.  */
-  w32_init_file_name_codepage ();
-#endif
-  w32_init_main_thread ();
-#endif
-
 #ifdef RUN_TIME_REMAP
   if (initialized)
     run_time_remap (argv[0]);
@@ -772,14 +706,6 @@ main (int argc, char **argv)
 
   if (argmatch (argv, argc, "-chdir", "--chdir", 4, &ch_to_dir, &skip_args))
     {
-#ifdef WINDOWSNT
-      /* argv[] array is kept in its original ANSI codepage encoding,
-	 we need to convert to UTF-8, for chdir to work.  */
-      char newdir[MAX_UTF8_PATH];
-
-      filename_from_ansi (ch_to_dir, newdir);
-      ch_to_dir = newdir;
-#endif
       original_pwd = emacs_get_current_dir_name ();
       if (chdir (ch_to_dir) != 0)
         {
@@ -949,13 +875,8 @@ main (int argc, char **argv)
 
   daemon_type = 0;
 
-#ifndef WINDOWSNT
   /* Make sure IS_DAEMON starts up as false.  */
   daemon_pipe[1] = 0;
-#else
-  w32_daemon_event = NULL;
-#endif
-
 
   int sockfd = -1;
 
@@ -1120,16 +1041,6 @@ Using an Emacs configured with --with-x-toolkit=lucid does not have this problem
 
           setsid ();
         } /* daemon_type == 2 */
-#elif defined(WINDOWSNT)
-      /* Indicate that we want daemon mode.  */
-      w32_daemon_event = CreateEvent (NULL, TRUE, FALSE, W32_DAEMON_EVENT);
-      if (w32_daemon_event == NULL)
-        {
-          fprintf (stderr, "Couldn't create MS-Windows event for daemon: %s\n",
-		   w32_strerror (0));
-          exit (1);
-        }
-#endif /* DOS */
       if (dname_arg)
 	daemon_name = xstrdup (dname_arg);
     }
@@ -1216,7 +1127,7 @@ Using an Emacs configured with --with-x-toolkit=lucid does not have this problem
   running_asynch_code = 0;
   init_random ();
 
-#if defined HAVE_JSON && !defined WINDOWSNT
+#if defined HAVE_JSON
   init_json ();
 #endif
 
@@ -1363,20 +1274,6 @@ Using an Emacs configured with --with-x-toolkit=lucid does not have this problem
   if (! dumping)
     set_initial_environment ();
 
-#ifdef WINDOWSNT
-  globals_of_w32 ();
-#ifdef HAVE_W32NOTIFY
-  globals_of_w32notify ();
-#endif
-  /* Initialize environment from registry settings.  Make sure to do
-     this only after calling set_initial_environment so that
-     Vinitial_environment and Vprocess_environment will contain only
-     variables from the parent process without modifications from
-     Emacs.  */
-  init_environment (argv);
-  init_ntproc (dumping); /* must precede init_editfns.  */
-#endif
-
   /* AIX crashes are reported in system versions 3.2.3 and 3.2.4
      if this is not done.  Do it after set_global_environment so that we
      don't pollute Vglobal_environment.  */
@@ -1406,10 +1303,6 @@ Using an Emacs configured with --with-x-toolkit=lucid does not have this problem
   init_callproc ();	/* Must follow init_cmdargs but not init_sys_modes.  */
   init_fileio ();
   init_lread ();
-#ifdef WINDOWSNT
-  /* Check to see if Emacs has been installed correctly.  */
-  check_windows_init_file ();
-#endif
 
   /* Intern the names of all standard functions and variables;
      define standard keys.  */
@@ -1460,12 +1353,6 @@ Using an Emacs configured with --with-x-toolkit=lucid does not have this problem
 #endif
       syms_of_textprop ();
       syms_of_composite ();
-#ifdef WINDOWSNT
-      syms_of_ntproc ();
-#endif /* WINDOWSNT */
-#if defined CYGWIN
-      syms_of_cygw32 ();
-#endif
       syms_of_window ();
       syms_of_xdisp ();
       syms_of_font ();
@@ -1494,21 +1381,6 @@ Using an Emacs configured with --with-x-toolkit=lucid does not have this problem
 
       syms_of_menu ();
 
-#ifdef HAVE_NTGUI
-      syms_of_w32term ();
-      syms_of_w32fns ();
-      syms_of_w32menu ();
-      syms_of_fontset ();
-#endif /* HAVE_NTGUI */
-
-#if defined HAVE_NTGUI || defined CYGWIN
-      syms_of_w32cygwinx ();
-#endif
-
-#if defined WINDOWSNT || defined HAVE_NTGUI
-      syms_of_w32select ();
-#endif
-
 #ifdef HAVE_NS
       syms_of_nsterm ();
       syms_of_nsfns ();
@@ -1535,13 +1407,6 @@ Using an Emacs configured with --with-x-toolkit=lucid does not have this problem
       syms_of_dbusbind ();
 #endif /* HAVE_DBUS */
 
-#ifdef WINDOWSNT
-      syms_of_ntterm ();
-#ifdef HAVE_W32NOTIFY
-      syms_of_w32notify ();
-#endif /* HAVE_W32NOTIFY */
-#endif /* WINDOWSNT */
-
       syms_of_threads ();
       syms_of_profiler ();
 
@@ -1555,20 +1420,6 @@ Using an Emacs configured with --with-x-toolkit=lucid does not have this problem
       keys_of_keyboard ();
       keys_of_keymap ();
       keys_of_window ();
-    }
-  else
-    {
-      /* Initialization that must be done even if the global variable
-	 initialized is non zero.  */
-#ifdef HAVE_NTGUI
-      globals_of_w32font ();
-      globals_of_w32fns ();
-      globals_of_w32menu ();
-#endif  /* HAVE_NTGUI */
-
-#if defined WINDOWSNT || defined HAVE_NTGUI
-      globals_of_w32select ();
-#endif
     }
 
   init_charset ();
@@ -1611,12 +1462,6 @@ Using an Emacs configured with --with-x-toolkit=lucid does not have this problem
       /* Handle -l loadup, args passed by Makefile.  */
       if (argmatch (argv, argc, "-l", "--load", 3, &file, &skip_args))
 	{
-#ifdef WINDOWSNT
-	  char file_utf8[MAX_UTF8_PATH];
-
-	  if (filename_from_ansi (file, file_utf8) == 0)
-	    file = file_utf8;
-#endif
 	  Vtop_level = list2 (Qload, build_unibyte_string (file));
 	}
       /* Unless next switch is -nl, load "loadup.el" first thing.  */
@@ -2059,10 +1904,6 @@ shut_down_emacs (int sig, Lisp_Object stuff)
 #ifdef HAVE_LIBXML2
   xml_cleanup_parser ();
 #endif
-
-#ifdef WINDOWSNT
-  term_ntproc (0);
-#endif
 }
 
 
@@ -2146,11 +1987,9 @@ You must run Emacs in batch mode in order to dump it.  */)
   /* Tell malloc where start of impure now is.  */
   /* Also arrange for warnings when nearly out of space.  */
 #if !defined SYSTEM_MALLOC && !defined HYBRID_MALLOC
-#ifndef WINDOWSNT
   /* On Windows, this was done before dumping, and that once suffices.
      Meanwhile, my_edata is not valid on Windows.  */
   memory_warnings (my_edata, malloc_warning);
-#endif /* not WINDOWSNT */
 #endif /* not SYSTEM_MALLOC and not HYBRID_MALLOC */
 
   alloc_unexec_pre ();
@@ -2159,9 +1998,6 @@ You must run Emacs in batch mode in order to dump it.  */)
 
   alloc_unexec_post ();
 
-#ifdef WINDOWSNT
-  Vlibrary_cache = Qnil;
-#endif
 #ifdef HAVE_WINDOW_SYSTEM
   reset_image_types ();
 #endif
@@ -2191,22 +2027,9 @@ synchronize_locale (int category, Lisp_Object *plocale, Lisp_Object desired_loca
   if (! EQ (*plocale, desired_locale))
     {
       *plocale = desired_locale;
-#ifdef WINDOWSNT
-      /* Changing categories like LC_TIME usually requires specifying
-	 an encoding suitable for the new locale, but MS-Windows's
-	 'setlocale' will only switch the encoding when LC_ALL is
-	 specified.  So we ignore CATEGORY, use LC_ALL instead, and
-	 then restore LC_NUMERIC to "C", so reading and printing
-	 numbers is unaffected.  */
-      setlocale (LC_ALL, (STRINGP (desired_locale)
-			  ? SSDATA (desired_locale)
-			  : ""));
-      fixup_locale ();
-#else  /* !WINDOWSNT */
       setlocale (category, (STRINGP (desired_locale)
 			    ? SSDATA (desired_locale)
 			    : ""));
-#endif	/* !WINDOWSNT */
     }
 }
 
@@ -2248,19 +2071,6 @@ decode_env_path (const char *evarname, const char *defalt, bool empty)
   /* Default is to use "." for empty path elements.
      But if argument EMPTY is true, use nil instead.  */
   Lisp_Object empty_element = empty ? Qnil : build_string (".");
-#ifdef WINDOWSNT
-  bool defaulted = 0;
-  static const char *emacs_dir_env = "%emacs_dir%/";
-  const size_t emacs_dir_len = strlen (emacs_dir_env);
-  const char *edir = egetenv ("emacs_dir");
-  char emacs_dir[MAX_UTF8_PATH];
-
-  /* egetenv looks in process-environment, which holds the variables
-     in their original system-locale encoding.  We need emacs_dir to
-     be in UTF-8.  */
-  if (edir)
-    filename_from_ansi (edir, emacs_dir);
-#endif
 
   /* It's okay to use getenv here, because this function is only used
      to initialize variables when Emacs starts up, and isn't called
@@ -2272,52 +2082,7 @@ decode_env_path (const char *evarname, const char *defalt, bool empty)
   if (!path)
     {
       path = defalt;
-#ifdef WINDOWSNT
-      defaulted = 1;
-#endif
     }
-#ifdef DOS_NT
-  /* Ensure values from the environment use the proper directory separator.  */
-  if (path)
-    {
-      char *path_copy;
-
-#ifdef WINDOWSNT
-      char *path_utf8, *q, *d;
-      int cnv_result;
-
-      /* Convert each element of PATH to UTF-8.  */
-      p = path_copy = alloca (strlen (path) + 1);
-      strcpy (path_copy, path);
-      d = path_utf8 = alloca (4 * strlen (path) + 1);
-      *d = '\0';
-      do {
-	q = _mbschr (p, SEPCHAR);
-	if (q)
-	  *q = '\0';
-	cnv_result = filename_from_ansi (p, d);
-	if (q)
-	  {
-	    *q++ = SEPCHAR;
-	    p = q;
-	    /* If conversion of this PATH elements fails, make sure
-	       destination pointer will stay put, thus effectively
-	       ignoring the offending element.  */
-	    if (cnv_result == 0)
-	      {
-		d += strlen (d);
-		*d++ = SEPCHAR;
-	      }
-	  }
-	else if (cnv_result != 0 && d > path_utf8)
-	  d[-1] = '\0';	/* remove last semi-colon and null-terminate PATH */
-      } while (q);
-      path_copy = path_utf8;
-#endif
-      dostounix_filename (path_copy);
-      path = path_copy;
-    }
-#endif
   lpath = Qnil;
   while (1)
     {
@@ -2328,17 +2093,6 @@ decode_env_path (const char *evarname, const char *defalt, bool empty)
 		 : empty_element);
       if (! NILP (element))
         {
-#ifdef WINDOWSNT
-          /* Relative file names in the default path are interpreted as
-             being relative to $emacs_dir.  */
-          if (edir && defaulted
-              && strncmp (path, emacs_dir_env, emacs_dir_len) == 0)
-            element = Fexpand_file_name (Fsubstring
-                                         (element,
-                                          make_number (emacs_dir_len),
-                                          Qnil),
-                                         build_unibyte_string (emacs_dir));
-#endif
 
           /* Add /: to the front of the name
              if it would otherwise be treated as magic.  */
@@ -2400,7 +2154,6 @@ from the parent process and its tty file descriptors.  */)
 
   if (NILP (Vafter_init_time))
     error ("This function can only be called after loading the init files");
-#ifndef WINDOWSNT
 
   if (daemon_type == 2)
     {
@@ -2427,14 +2180,6 @@ from the parent process and its tty file descriptors.  */)
 
   /* Set it to an invalid value so we know we've already run this function.  */
   daemon_type = -1;
-
-#else  /* WINDOWSNT */
-  /* Signal the waiting emacsclient process.  */
-  err |= SetEvent (w32_daemon_event) == 0;
-  err |= CloseHandle (w32_daemon_event) == 0;
-  /* Set it to an invalid value so we know we've already run this function.  */
-  w32_daemon_event = INVALID_HANDLE_VALUE;
-#endif
 
   if (err)
     error ("I/O error during daemon initialization");
@@ -2597,9 +2342,4 @@ Also note that this is not a generic facility for accessing external
 libraries; only those already known by Emacs will be loaded.  */);
   Vdynamic_library_alist = Qnil;
   Fput (intern_c_string ("dynamic-library-alist"), Qrisky_local_variable, Qt);
-
-#ifdef WINDOWSNT
-  Vlibrary_cache = Qnil;
-  staticpro (&Vlibrary_cache);
-#endif
 }
