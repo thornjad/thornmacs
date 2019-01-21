@@ -5803,15 +5803,6 @@ init_display (void)
     }
 #endif /* HAVE_X_WINDOWS */
 
-#ifdef HAVE_NTGUI
-  if (!inhibit_window_system)
-    {
-      Vinitial_window_system = Qw32;
-      Vwindow_system_version = make_number (1);
-      return;
-    }
-#endif /* HAVE_NTGUI */
-
 #ifdef HAVE_NS
   if (!inhibit_window_system
 #ifndef CANNOT_DUMP

@@ -1449,20 +1449,6 @@ init_fringe_bitmap (int which, struct fringe_bitmap *fb, int once_p)
 	}
 #endif /* not USE_CAIRO */
 #endif /* HAVE_X_WINDOWS */
-
-#ifdef HAVE_NTGUI
-      unsigned short *bits = fb->bits;
-      int j;
-      for (j = 0; j < fb->height; j++)
-	{
-	  unsigned short b = *bits;
-	  b <<= (16 - fb->width);
-	  /* Windows is little-endian, so the next line is always
-	     needed.  */
-	  b = ((b >> 8) | (b << 8));
-	  *bits++ = b;
-	}
-#endif
     }
 
   if (!once_p)
@@ -1761,14 +1747,10 @@ init_fringe (void)
   fringe_faces = xzalloc (max_fringe_bitmaps * sizeof *fringe_faces);
 }
 
-#if defined (HAVE_NTGUI) || defined (USE_CAIRO)
+#if defined (USE_CAIRO)
 
 void
-#ifdef HAVE_NTGUI
-w32_init_fringe (struct redisplay_interface *rif)
-#else
 x_cr_init_fringe (struct redisplay_interface *rif)
-#endif
 {
   int bt;
 
@@ -1782,20 +1764,3 @@ x_cr_init_fringe (struct redisplay_interface *rif)
     }
 }
 #endif
-
-#ifdef HAVE_NTGUI
-void
-w32_reset_fringes (void)
-{
-  /* Destroy row bitmaps.  */
-  int bt;
-  struct redisplay_interface *rif = FRAME_RIF (SELECTED_FRAME ());
-
-  if (!rif)
-    return;
-
-  for (bt = NO_FRINGE_BITMAP + 1; bt < max_used_fringe_bitmap; bt++)
-    rif->destroy_fringe_bitmap (bt);
-}
-
-#endif /* HAVE_NTGUI */

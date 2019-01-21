@@ -135,28 +135,6 @@ typedef bool bool_bf;
 #endif
 #endif
 
-#ifdef CYGWIN
-#define SYSTEM_PURESIZE_EXTRA 50000
-#endif
-
-#if defined HAVE_NTGUI && !defined DebPrint
-# ifdef EMACSDEBUG
-extern void _DebPrint (const char *fmt, ...);
-#  define DebPrint(stuff) _DebPrint stuff
-# else
-#  define DebPrint(stuff) ((void) 0)
-# endif
-#endif
-
-#if defined CYGWIN && defined HAVE_NTGUI
-# define NTGUI_UNICODE /* Cygwin runs only on UNICODE-supporting systems */
-# define _WIN32_WINNT 0x500 /* Win2k */
-/* The following was in /usr/include/string.h prior to Cygwin 1.7.33.  */
-#ifndef strnicmp
-#define strnicmp strncasecmp
-#endif
-#endif
-
 #ifdef emacs /* Don't do this for lib-src.  */
 /* Tell regex.c to use a type compatible with Emacs.  */
 #define RE_TRANSLATE_TYPE Lisp_Object

@@ -40,9 +40,6 @@ enum fullscreen_type
   FULLSCREEN_HEIGHT    = 0x2,
   FULLSCREEN_BOTH      = 0x3, /* Not a typo but means "width and height".  */
   FULLSCREEN_MAXIMIZED = 0x4,
-#ifdef HAVE_NTGUI
-  FULLSCREEN_WAIT      = 0x8
-#endif
 };
 
 enum z_group
@@ -207,13 +204,6 @@ struct frame
   /* Number of elements in `menu_bar_vector' that have meaningful data.  */
   int menu_bar_items_used;
 
-#if defined (HAVE_NTGUI)
-  /* A buffer to hold the frame's name.  Since this is used by the
-     window system toolkit, we can't use the Lisp string's pointer
-     (`name', above) because it might get relocated.  */
-  char *namebuf;
-#endif
-
   /* Glyph pool and matrix.  */
   struct glyph_pool *current_pool;
   struct glyph_pool *desired_pool;
@@ -262,12 +252,6 @@ struct frame
 
   /* True if it needs to be redisplayed.  */
   bool_bf redisplay : 1;
-
-#if defined (HAVE_NTGUI)	\
-    || defined (HAVE_NS) || defined (USE_GTK)
-  /* True means using a menu bar that comes from the X toolkit.  */
-  bool_bf external_menu_bar : 1;
-#endif
 
   /* Next two bitfields are mutually exclusive.  They might both be
      zero if the frame has been made invisible without an icon.  */
@@ -347,10 +331,8 @@ struct frame
   /* True if this is an undecorated frame.  */
   bool_bf undecorated : 1;
 
-#ifndef HAVE_NTGUI
   /* True if this is an override_redirect frame.  */
   bool_bf override_redirect : 1;
-#endif
 
   /* Nonzero if this frame's icon should not appear on its display's taskbar.  */
   bool_bf skip_taskbar : 1;
@@ -728,11 +710,7 @@ default_pixels_per_inch_y (void)
 #define FRAME_INITIAL_P(f) ((f)->output_method == output_initial)
 #define FRAME_TERMCAP_P(f) ((f)->output_method == output_termcap)
 #define FRAME_X_P(f) ((f)->output_method == output_x_window)
-#ifndef HAVE_NTGUI
 #define FRAME_W32_P(f) false
-#else
-#define FRAME_W32_P(f) ((f)->output_method == output_w32)
-#endif
 #ifndef HAVE_NS
 #define FRAME_NS_P(f) false
 #else
@@ -744,9 +722,6 @@ default_pixels_per_inch_y (void)
 
 #ifdef HAVE_X_WINDOWS
 #define FRAME_WINDOW_P(f) FRAME_X_P (f)
-#endif
-#ifdef HAVE_NTGUI
-#define FRAME_WINDOW_P(f) FRAME_W32_P (f)
 #endif
 #ifdef HAVE_NS
 #define FRAME_WINDOW_P(f) FRAME_NS_P(f)
@@ -862,12 +837,7 @@ default_pixels_per_inch_y (void)
 
 /* True if this frame should display a menu bar
    in a way that does not use any text lines.  */
-#if defined (HAVE_NTGUI) \
-     || defined (HAVE_NS) || defined (USE_GTK)
-#define FRAME_EXTERNAL_MENU_BAR(f) (f)->external_menu_bar
-#else
 #define FRAME_EXTERNAL_MENU_BAR(f) false
-#endif
 
 /* True if frame F is currently visible.  */
 #define FRAME_VISIBLE_P(f) (f)->visible
@@ -936,11 +906,7 @@ default_pixels_per_inch_y (void)
 
 #if defined (HAVE_WINDOW_SYSTEM)
 #define FRAME_UNDECORATED(f) ((f)->undecorated)
-#ifdef HAVE_NTGUI
-#define FRAME_OVERRIDE_REDIRECT(f) ((void) (f), 0)
-#else
 #define FRAME_OVERRIDE_REDIRECT(f) ((f)->override_redirect)
-#endif
 #define FRAME_PARENT_FRAME(f)			\
   (NILP ((f)->parent_frame)			\
    ? NULL					\

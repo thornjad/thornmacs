@@ -67,11 +67,6 @@ typedef struct _widget_value
   /* True if was edited (maintained by get_value).  */
   bool edited;
 
-#ifdef HAVE_NTGUI
-  /* True if menu title.  */
-  bool title;
-#endif
-
   /* The type of a button.  */
   enum button_type button_type;
 

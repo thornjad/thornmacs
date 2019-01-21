@@ -58,13 +58,6 @@ typedef XImagePtr XImagePtr_or_DC;
 #define NativeRectangle XRectangle
 #endif
 
-#ifdef HAVE_NTGUI
-#include "w32gui.h"
-typedef struct w32_display_info Display_Info;
-typedef XImage *XImagePtr;
-typedef HDC XImagePtr_or_DC;
-#endif
-
 #ifdef HAVE_NS
 #include "nsgui.h"
 /* Following typedef needed to accommodate the MSDOS port, believe it or not.  */
@@ -1338,10 +1331,6 @@ struct glyph_string
   /* The GC to use for drawing this glyph string.  */
 #if defined (HAVE_X_WINDOWS)
   GC gc;
-#endif
-#if defined (HAVE_NTGUI)
-  XGCValues *gc;
-  HDC hdc;
 #endif
 
   /* A pointer to the first glyph in the string.  This glyph
@@ -3297,10 +3286,6 @@ void draw_row_fringe_bitmaps (struct window *, struct glyph_row *);
 bool draw_window_fringes (struct window *, bool);
 bool update_window_fringes (struct window *, bool);
 
-#ifdef HAVE_NTGUI
-void w32_init_fringe (struct redisplay_interface *);
-void w32_reset_fringes (void);
-#endif
 #ifdef USE_CAIRO
 void x_cr_init_fringe (struct redisplay_interface *);
 #endif
@@ -3336,10 +3321,6 @@ ptrdiff_t lookup_image (struct frame *, Lisp_Object);
 
 #if defined (HAVE_X_WINDOWS) ||  defined (HAVE_NS)
 #define RGB_PIXEL_COLOR unsigned long
-#endif
-
-#ifdef HAVE_NTGUI
-#define RGB_PIXEL_COLOR COLORREF
 #endif
 
 RGB_PIXEL_COLOR image_background (struct image *, struct frame *,
@@ -3401,9 +3382,6 @@ extern char unspecified_fg[], unspecified_bg[];
 
 #ifdef HAVE_X_WINDOWS
 void gamma_correct (struct frame *, XColor *);
-#endif
-#ifdef HAVE_NTGUI
-void gamma_correct (struct frame *, COLORREF *);
 #endif
 
 #ifdef HAVE_WINDOW_SYSTEM

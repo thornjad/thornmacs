@@ -761,9 +761,6 @@ make_frame (bool mini_p)
   f->want_fullscreen = FULLSCREEN_NONE;
   f->undecorated = false;
   f->no_special_glyphs = false;
-#ifndef HAVE_NTGUI
-  f->override_redirect = false;
-#endif
   f->skip_taskbar = false;
   f->no_focus_on_map = false;
   f->no_accept_focus = false;
@@ -1824,9 +1821,6 @@ delete_frame (Lisp_Object frame, Lisp_Object force)
   fset_buried_buffer_list (f, Qnil);
 
   free_font_driver_list (f);
-#if defined (HAVE_NTGUI)
-  xfree (f->namebuf);
-#endif
   xfree (f->decode_mode_spec_buffer);
   xfree (FRAME_INSERT_COST (f));
   xfree (FRAME_DELETEN_COST (f));
@@ -4302,7 +4296,7 @@ x_set_alpha (struct frame *f, Lisp_Object arg, Lisp_Object oldval)
   for (i = 0; i < 2; i++)
     f->alpha[i] = newval[i];
 
-#if defined (HAVE_X_WINDOWS) || defined (HAVE_NTGUI) || defined (NS_IMPL_COCOA)
+#if defined (HAVE_X_WINDOWS) || defined (NS_IMPL_COCOA)
   block_input ();
   x_set_frame_alpha (f);
   unblock_input ();
@@ -5611,11 +5605,7 @@ Note that when a frame is not large enough to accommodate a change of
 any of the parameters listed above, Emacs may try to enlarge the frame
 even if this option is non-nil.  */);
 #if defined (HAVE_WINDOW_SYSTEM)
-#if defined (HAVE_NTGUI)
-  frame_inhibit_implied_resize = list1 (Qtool_bar_lines);
-#else
   frame_inhibit_implied_resize = Qnil;
-#endif
 #else
   frame_inhibit_implied_resize = Qt;
 #endif

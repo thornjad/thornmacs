@@ -3789,8 +3789,7 @@ kbd_buffer_get_event (KBOARD **kbp,
 	}
         break;
 
-#if defined (HAVE_NTGUI) \
-    || defined (HAVE_NS) || defined (USE_GTK)
+#if defined (HAVE_NS) || defined (USE_GTK)
       case MENU_BAR_ACTIVATE_EVENT:
 	{
 	  kbd_fetch_ptr = event + 1;
@@ -3806,11 +3805,7 @@ kbd_buffer_get_event (KBOARD **kbp,
 	  *used_mouse_menu = true;
 	FALLTHROUGH;
 #endif
-#ifdef HAVE_NTGUI
-      case END_SESSION_EVENT:
-      case LANGUAGE_CHANGE_EVENT:
-#endif
-#if defined (HAVE_X11) || defined (HAVE_NTGUI) || defined (HAVE_NS)
+#if defined (HAVE_X11) || defined (HAVE_NS)
       case DELETE_WINDOW_EVENT:
       case ICONIFY_EVENT:
       case DEICONIFY_EVENT:
@@ -3867,8 +3862,7 @@ kbd_buffer_get_event (KBOARD **kbp,
 	    {
 	      obj = make_lispy_event (&event->ie);
 
-#if defined (HAVE_NTGUI) \
-    || defined (HAVE_NS) || defined (USE_GTK)
+#if defined (HAVE_NS) || defined (USE_GTK)
 	      /* If this was a menu selection, then set the flag to inhibit
 		 writing to last_nonmenu_event.  Don't do this if the event
 		 we're returning is (menu-bar), though; that indicates the
@@ -4449,262 +4443,6 @@ static const char *const lispy_accent_keys[] =
   "dead-horn",
 };
 
-#ifdef HAVE_NTGUI
-#define FUNCTION_KEY_OFFSET 0x0
-
-const char *const lispy_function_keys[] =
-  {
-    0,                /* 0                      */
-
-    0,                /* VK_LBUTTON        0x01 */
-    0,                /* VK_RBUTTON        0x02 */
-    "cancel",         /* VK_CANCEL         0x03 */
-    0,                /* VK_MBUTTON        0x04 */
-
-    0, 0, 0,          /*    0x05 .. 0x07        */
-
-    "backspace",      /* VK_BACK           0x08 */
-    "tab",            /* VK_TAB            0x09 */
-
-    0, 0,             /*    0x0A .. 0x0B        */
-
-    "clear",          /* VK_CLEAR          0x0C */
-    "return",         /* VK_RETURN         0x0D */
-
-    0, 0,             /*    0x0E .. 0x0F        */
-
-    0,                /* VK_SHIFT          0x10 */
-    0,                /* VK_CONTROL        0x11 */
-    0,                /* VK_MENU           0x12 */
-    "pause",          /* VK_PAUSE          0x13 */
-    "capslock",       /* VK_CAPITAL        0x14 */
-    "kana",           /* VK_KANA/VK_HANGUL 0x15 */
-    0,                /*    0x16                */
-    "junja",          /* VK_JUNJA          0x17 */
-    "final",          /* VK_FINAL          0x18 */
-    "kanji",          /* VK_KANJI/VK_HANJA 0x19 */
-    0,                /*    0x1A                */
-    "escape",         /* VK_ESCAPE         0x1B */
-    "convert",        /* VK_CONVERT        0x1C */
-    "non-convert",    /* VK_NONCONVERT     0x1D */
-    "accept",         /* VK_ACCEPT         0x1E */
-    "mode-change",    /* VK_MODECHANGE     0x1F */
-    0,                /* VK_SPACE          0x20 */
-    "prior",          /* VK_PRIOR          0x21 */
-    "next",           /* VK_NEXT           0x22 */
-    "end",            /* VK_END            0x23 */
-    "home",           /* VK_HOME           0x24 */
-    "left",           /* VK_LEFT           0x25 */
-    "up",             /* VK_UP             0x26 */
-    "right",          /* VK_RIGHT          0x27 */
-    "down",           /* VK_DOWN           0x28 */
-    "select",         /* VK_SELECT         0x29 */
-    "print",          /* VK_PRINT          0x2A */
-    "execute",        /* VK_EXECUTE        0x2B */
-    "snapshot",       /* VK_SNAPSHOT       0x2C */
-    "insert",         /* VK_INSERT         0x2D */
-    "delete",         /* VK_DELETE         0x2E */
-    "help",           /* VK_HELP           0x2F */
-
-    /* VK_0 thru VK_9 are the same as ASCII '0' thru '9' (0x30 - 0x39) */
-
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-
-    0, 0, 0, 0, 0, 0, 0, /* 0x3A .. 0x40       */
-
-    /* VK_A thru VK_Z are the same as ASCII 'A' thru 'Z' (0x41 - 0x5A) */
-
-    0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0,
-
-    "lwindow",       /* VK_LWIN           0x5B */
-    "rwindow",       /* VK_RWIN           0x5C */
-    "apps",          /* VK_APPS           0x5D */
-    0,               /*    0x5E                */
-    "sleep",
-    "kp-0",          /* VK_NUMPAD0        0x60 */
-    "kp-1",          /* VK_NUMPAD1        0x61 */
-    "kp-2",          /* VK_NUMPAD2        0x62 */
-    "kp-3",          /* VK_NUMPAD3        0x63 */
-    "kp-4",          /* VK_NUMPAD4        0x64 */
-    "kp-5",          /* VK_NUMPAD5        0x65 */
-    "kp-6",          /* VK_NUMPAD6        0x66 */
-    "kp-7",          /* VK_NUMPAD7        0x67 */
-    "kp-8",          /* VK_NUMPAD8        0x68 */
-    "kp-9",          /* VK_NUMPAD9        0x69 */
-    "kp-multiply",   /* VK_MULTIPLY       0x6A */
-    "kp-add",        /* VK_ADD            0x6B */
-    "kp-separator",  /* VK_SEPARATOR      0x6C */
-    "kp-subtract",   /* VK_SUBTRACT       0x6D */
-    "kp-decimal",    /* VK_DECIMAL        0x6E */
-    "kp-divide",     /* VK_DIVIDE         0x6F */
-    "f1",            /* VK_F1             0x70 */
-    "f2",            /* VK_F2             0x71 */
-    "f3",            /* VK_F3             0x72 */
-    "f4",            /* VK_F4             0x73 */
-    "f5",            /* VK_F5             0x74 */
-    "f6",            /* VK_F6             0x75 */
-    "f7",            /* VK_F7             0x76 */
-    "f8",            /* VK_F8             0x77 */
-    "f9",            /* VK_F9             0x78 */
-    "f10",           /* VK_F10            0x79 */
-    "f11",           /* VK_F11            0x7A */
-    "f12",           /* VK_F12            0x7B */
-    "f13",           /* VK_F13            0x7C */
-    "f14",           /* VK_F14            0x7D */
-    "f15",           /* VK_F15            0x7E */
-    "f16",           /* VK_F16            0x7F */
-    "f17",           /* VK_F17            0x80 */
-    "f18",           /* VK_F18            0x81 */
-    "f19",           /* VK_F19            0x82 */
-    "f20",           /* VK_F20            0x83 */
-    "f21",           /* VK_F21            0x84 */
-    "f22",           /* VK_F22            0x85 */
-    "f23",           /* VK_F23            0x86 */
-    "f24",           /* VK_F24            0x87 */
-
-    0, 0, 0, 0,      /*    0x88 .. 0x8B        */
-    0, 0, 0, 0,      /*    0x8C .. 0x8F        */
-
-    "kp-numlock",    /* VK_NUMLOCK        0x90 */
-    "scroll",        /* VK_SCROLL         0x91 */
-    /* Not sure where the following block comes from.
-       Windows headers have NEC and Fujitsu specific keys in
-       this block, but nothing generic.  */
-    "kp-space",	     /* VK_NUMPAD_CLEAR   0x92 */
-    "kp-enter",	     /* VK_NUMPAD_ENTER   0x93 */
-    "kp-prior",	     /* VK_NUMPAD_PRIOR   0x94 */
-    "kp-next",	     /* VK_NUMPAD_NEXT    0x95 */
-    "kp-end",	     /* VK_NUMPAD_END     0x96 */
-    "kp-home",	     /* VK_NUMPAD_HOME    0x97 */
-    "kp-left",	     /* VK_NUMPAD_LEFT    0x98 */
-    "kp-up",	     /* VK_NUMPAD_UP      0x99 */
-    "kp-right",	     /* VK_NUMPAD_RIGHT   0x9A */
-    "kp-down",	     /* VK_NUMPAD_DOWN    0x9B */
-    "kp-insert",     /* VK_NUMPAD_INSERT  0x9C */
-    "kp-delete",     /* VK_NUMPAD_DELETE  0x9D */
-
-    0, 0,	     /*    0x9E .. 0x9F        */
-
-    /*
-     * VK_L* & VK_R* - left and right Alt, Ctrl and Shift virtual keys.
-     * Used only as parameters to GetAsyncKeyState and GetKeyState.
-     * No other API or message will distinguish left and right keys this way.
-     * 0xA0 .. 0xA5
-     */
-    0, 0, 0, 0, 0, 0,
-
-    /* Multimedia keys. These are handled as WM_APPCOMMAND, which allows us
-       to enable them selectively, and gives access to a few more functions.
-       See lispy_multimedia_keys below.  */
-    0, 0, 0, 0, 0, 0, 0, /* 0xA6 .. 0xAC        Browser */
-    0, 0, 0,             /* 0xAD .. 0xAF         Volume */
-    0, 0, 0, 0,          /* 0xB0 .. 0xB3          Media */
-    0, 0, 0, 0,          /* 0xB4 .. 0xB7           Apps */
-
-    /* 0xB8 .. 0xC0 "OEM" keys - all seem to be punctuation.  */
-    0, 0, 0, 0, 0, 0, 0, 0, 0,
-
-    /* 0xC1 - 0xDA unallocated, 0xDB-0xDF more OEM keys */
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-
-    0,               /* 0xE0                   */
-    "ax",            /* VK_OEM_AX         0xE1 */
-    0,               /* VK_OEM_102        0xE2 */
-    "ico-help",      /* VK_ICO_HELP       0xE3 */
-    "ico-00",        /* VK_ICO_00         0xE4 */
-    0,               /* VK_PROCESSKEY     0xE5 - used by IME */
-    "ico-clear",     /* VK_ICO_CLEAR      0xE6 */
-    0,               /* VK_PACKET         0xE7  - used to pass Unicode chars */
-    0,               /*                   0xE8 */
-    "reset",         /* VK_OEM_RESET      0xE9 */
-    "jump",          /* VK_OEM_JUMP       0xEA */
-    "oem-pa1",       /* VK_OEM_PA1        0xEB */
-    "oem-pa2",       /* VK_OEM_PA2        0xEC */
-    "oem-pa3",       /* VK_OEM_PA3        0xED */
-    "wsctrl",        /* VK_OEM_WSCTRL     0xEE */
-    "cusel",         /* VK_OEM_CUSEL      0xEF */
-    "oem-attn",      /* VK_OEM_ATTN       0xF0 */
-    "finish",        /* VK_OEM_FINISH     0xF1 */
-    "copy",          /* VK_OEM_COPY       0xF2 */
-    "auto",          /* VK_OEM_AUTO       0xF3 */
-    "enlw",          /* VK_OEM_ENLW       0xF4 */
-    "backtab",       /* VK_OEM_BACKTAB    0xF5 */
-    "attn",          /* VK_ATTN           0xF6 */
-    "crsel",         /* VK_CRSEL          0xF7 */
-    "exsel",         /* VK_EXSEL          0xF8 */
-    "ereof",         /* VK_EREOF          0xF9 */
-    "play",          /* VK_PLAY           0xFA */
-    "zoom",          /* VK_ZOOM           0xFB */
-    "noname",        /* VK_NONAME         0xFC */
-    "pa1",           /* VK_PA1            0xFD */
-    "oem_clear",     /* VK_OEM_CLEAR      0xFE */
-    0 /* 0xFF */
-  };
-
-/* Some of these duplicate the "Media keys" on newer keyboards,
-   but they are delivered to the application in a different way.  */
-static const char *const lispy_multimedia_keys[] =
-  {
-    0,
-    "browser-back",
-    "browser-forward",
-    "browser-refresh",
-    "browser-stop",
-    "browser-search",
-    "browser-favorites",
-    "browser-home",
-    "volume-mute",
-    "volume-down",
-    "volume-up",
-    "media-next",
-    "media-previous",
-    "media-stop",
-    "media-play-pause",
-    "mail",
-    "media-select",
-    "app-1",
-    "app-2",
-    "bass-down",
-    "bass-boost",
-    "bass-up",
-    "treble-down",
-    "treble-up",
-    "mic-volume-mute",
-    "mic-volume-down",
-    "mic-volume-up",
-    "help",
-    "find",
-    "new",
-    "open",
-    "close",
-    "save",
-    "print",
-    "undo",
-    "redo",
-    "copy",
-    "cut",
-    "paste",
-    "mail-reply",
-    "mail-forward",
-    "mail-send",
-    "spell-check",
-    "toggle-dictate-command",
-    "mic-toggle",
-    "correction-list",
-    "media-play",
-    "media-pause",
-    "media-record",
-    "media-fast-forward",
-    "media-rewind",
-    "media-channel-up",
-    "media-channel-down"
-  };
-
-#else /* not HAVE_NTGUI */
-
 /* This should be dealt with in XTread_socket now, and that doesn't
    depend on the client system having the Kana syms defined.  See also
    the XK_kana_A case below.  */
@@ -4854,7 +4592,6 @@ static const char *const iso_lispy_function_keys[] =
     "iso-emphasize", "iso-center-object", "iso-enter", /* ... 0xfe34 */
   };
 
-#endif /* not HAVE_NTGUI */
 
 static Lisp_Object Vlispy_mouse_stem;
 
@@ -5169,7 +4906,7 @@ make_lispy_position (struct frame *f, Lisp_Object x, Lisp_Object y,
 static bool
 toolkit_menubar_in_use (struct frame *f)
 {
-#if defined (USE_GTK) || defined (HAVE_NS) || defined (HAVE_NTGUI)
+#if defined (USE_GTK) || defined (HAVE_NS)
   return !(!FRAME_WINDOW_P (f));
 #else
   return false;
@@ -5202,7 +4939,7 @@ make_lispy_event (struct input_event *event)
 
   switch (event->kind)
     {
-#if defined (HAVE_X11) || defined (HAVE_NTGUI) || defined (HAVE_NS)
+#if defined (HAVE_X11) || defined (HAVE_NS)
     case DELETE_WINDOW_EVENT:
       /* Make an event (delete-frame (FRAME)).  */
       return list2 (Qdelete_frame, list1 (event->frame_or_window));
@@ -5425,30 +5162,6 @@ make_lispy_event (struct input_event *event)
 				  KVAR (current_kboard, Vsystem_key_alist),
 				  0, &KVAR (current_kboard, system_key_syms),
 				  PTRDIFF_MAX);
-
-#ifdef HAVE_NTGUI
-    case END_SESSION_EVENT:
-      /* Make an event (end-session).  */
-      return list1 (Qend_session);
-
-    case LANGUAGE_CHANGE_EVENT:
-      /* Make an event (language-change FRAME CODEPAGE LANGUAGE-ID).  */
-      return list4 (Qlanguage_change,
-		    event->frame_or_window,
-		    make_number (event->code),
-		    make_number (event->modifiers));
-
-    case MULTIMEDIA_KEY_EVENT:
-      if (event->code < ARRAYELTS (lispy_multimedia_keys)
-          && event->code > 0 && lispy_multimedia_keys[event->code])
-        {
-          return modify_event_symbol (event->code, event->modifiers,
-                                      Qfunction_key, Qnil,
-                                      lispy_multimedia_keys, &func_key_syms,
-                                      ARRAYELTS (lispy_multimedia_keys));
-        }
-      return Qnil;
-#endif
 
       /* A mouse click.  Figure out where it is, decide whether it's
          a press, click or drag, and build the appropriate structure.  */
@@ -5885,8 +5598,7 @@ make_lispy_event (struct input_event *event)
 	return list3 (head, position, files);
       }
 
-#if defined (HAVE_NTGUI) \
-    || defined (HAVE_NS) || defined (USE_GTK)
+#if defined (HAVE_NS) || defined (USE_GTK)
     case MENU_BAR_EVENT:
       if (EQ (event->arg, event->frame_or_window))
 	/* This is the prefix key.  We translate this to
@@ -10825,11 +10537,6 @@ syms_of_keyboard (void)
   /* Menu and tool bar item parts.  */
   DEFSYM (Qmenu_enable, "menu-enable");
 
-#ifdef HAVE_NTGUI
-  DEFSYM (Qlanguage_change, "language-change");
-  DEFSYM (Qend_session, "end-session");
-#endif
-
 #ifdef HAVE_DBUS
   DEFSYM (Qdbus_event, "dbus-event");
 #endif
@@ -11593,10 +11300,6 @@ keys_of_keyboard (void)
 
   initial_define_lispy_key (Vspecial_event_map, "delete-frame",
 			    "handle-delete-frame");
-#ifdef HAVE_NTGUI
-  initial_define_lispy_key (Vspecial_event_map, "end-session",
-			    "kill-emacs");
-#endif
   initial_define_lispy_key (Vspecial_event_map, "ns-put-working-text",
 			    "ns-put-working-text");
   initial_define_lispy_key (Vspecial_event_map, "ns-unput-working-text",

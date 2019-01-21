@@ -212,9 +212,6 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #ifdef HAVE_WINDOW_SYSTEM
 #include TERM_HEADER
 #include "fontset.h"
-#ifdef HAVE_NTGUI
-#define GCGraphicsExposures 0
-#endif /* HAVE_NTGUI */
 
 #ifdef HAVE_NS
 #define GCGraphicsExposures 0
@@ -479,32 +476,6 @@ x_free_gc (struct frame *f, GC gc)
 }
 
 #endif /* HAVE_X_WINDOWS */
-
-#ifdef HAVE_NTGUI
-/* W32 emulation of GCs */
-
-static GC
-x_create_gc (struct frame *f, unsigned long mask, XGCValues *xgcv)
-{
-  GC gc;
-  block_input ();
-  gc = XCreateGC (NULL, FRAME_W32_WINDOW (f), mask, xgcv);
-  unblock_input ();
-  IF_DEBUG (++ngcs);
-  return gc;
-}
-
-
-/* Free GC which was used on frame F.  */
-
-static void
-x_free_gc (struct frame *f, GC gc)
-{
-  IF_DEBUG ((--ngcs, eassert (ngcs >= 0)));
-  xfree (gc);
-}
-
-#endif  /* HAVE_NTGUI */
 
 #ifdef HAVE_NS
 /* NS emulation of GCs */
@@ -910,10 +881,6 @@ defined_color (struct frame *f, const char *color_name, XColor *color_def,
 #ifdef HAVE_X_WINDOWS
   else if (FRAME_X_P (f))
     return x_defined_color (f, color_name, color_def, alloc);
-#endif
-#ifdef HAVE_NTGUI
-  else if (FRAME_W32_P (f))
-    return w32_defined_color (f, color_name, color_def, alloc);
 #endif
 #ifdef HAVE_NS
   else if (FRAME_NS_P (f))
@@ -3109,7 +3076,6 @@ FRAME 0 means change the face on all frames, and change the default
 	    param = Qbackground_color;
 	}
 #ifdef HAVE_WINDOW_SYSTEM
-#ifndef HAVE_NTGUI
       else if (EQ (face, Qscroll_bar))
 	{
 	  /* Changing the colors of `scroll-bar' sets frame parameters
@@ -3119,7 +3085,6 @@ FRAME 0 means change the face on all frames, and change the default
 	  else if (EQ (attr, QCbackground))
 	    param = Qscroll_bar_background;
 	}
-#endif /* not HAVE_NTGUI */
       else if (EQ (face, Qborder))
 	{
 	  /* Changing background color of `border' sets frame parameter
@@ -6032,7 +5997,6 @@ merge_faces (struct frame *f, Lisp_Object face_name, int face_id,
   return lookup_face (f, attrs);
 }
 
-
 
 #ifndef HAVE_X_WINDOWS
 DEFUN ("x-load-color-file", Fx_load_color_file,
@@ -6062,11 +6026,7 @@ where R,G,B are numbers between 0 and 255 and name is an arbitrary string.  */)
       while (fgets_unlocked (buf, sizeof (buf), fp) != NULL) {
 	if (sscanf (buf, "%d %d %d %n", &red, &green, &blue, &num) == 3)
 	  {
-#ifdef HAVE_NTGUI
-	    int color = RGB (red, green, blue);
-#else
 	    int color = (red << 16) | (green << 8) | blue;
-#endif
 	    char *name = buf + num;
 	    ptrdiff_t len = strlen (name);
 	    len -= 0 < len && name[len - 1] == '\n';
@@ -6081,7 +6041,7 @@ where R,G,B are numbers between 0 and 255 and name is an arbitrary string.  */)
 }
 #endif
 
-
+
 /***********************************************************************
 				Tests
  ***********************************************************************/

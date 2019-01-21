@@ -404,8 +404,6 @@ decode_options (int argc, char **argv)
          didn't give us an explicit display.  */
 #if defined (NS_IMPL_COCOA)
       alt_display = "ns";
-#elif defined (HAVE_NTGUI)
-      alt_display = "w32";
 #endif
 
       display = egetenv ("DISPLAY");
@@ -1171,92 +1169,6 @@ set_socket (int no_exit_if_error)
   exit (EXIT_FAILURE);
 }
 
-#ifdef HAVE_NTGUI
-FARPROC set_fg;  /* Pointer to AllowSetForegroundWindow.  */
-FARPROC get_wc;  /* Pointer to RealGetWindowClassA.  */
-
-void w32_set_user_model_id (void);
-
-void
-w32_set_user_model_id (void)
-{
-  HMODULE shell;
-  HRESULT (WINAPI * set_user_model) (const wchar_t * id);
-
-  /* On Windows 7 and later, we need to set the user model ID
-     to associate emacsclient launched files with Emacs frames
-     in the UI.  */
-  shell = LoadLibrary ("shell32.dll");
-  if (shell)
-    {
-      set_user_model
-	= (void *) GetProcAddress (shell,
-				   "SetCurrentProcessExplicitAppUserModelID");
-      /* If the function is defined, then we are running on Windows 7
-	 or newer, and the UI uses this to group related windows
-	 together.  Since emacs, runemacs, emacsclient are related, we
-	 want them grouped even though the executables are different,
-	 so we need to set a consistent ID between them.  */
-      if (set_user_model)
-	set_user_model (L"GNU.Emacs");
-
-      FreeLibrary (shell);
-    }
-}
-
-BOOL CALLBACK w32_find_emacs_process (HWND, LPARAM);
-
-BOOL CALLBACK
-w32_find_emacs_process (HWND hWnd, LPARAM lParam)
-{
-  DWORD pid;
-  char class[6];
-
-  /* Reject any window not of class "Emacs".  */
-  if (! get_wc (hWnd, class, sizeof (class))
-      || strcmp (class, "Emacs"))
-    return TRUE;
-
-  /* We only need the process id, not the thread id.  */
-  (void) GetWindowThreadProcessId (hWnd, &pid);
-
-  /* Not the one we're looking for.  */
-  if (pid != (DWORD) emacs_pid) return TRUE;
-
-  /* OK, let's raise it.  */
-  set_fg (emacs_pid);
-
-  /* Stop enumeration.  */
-  return FALSE;
-}
-
-/* Search for a window of class "Emacs" and owned by a process with
-   process id = emacs_pid.  If found, allow it to grab the focus.  */
-void w32_give_focus (void);
-
-void
-w32_give_focus (void)
-{
-  HANDLE user32;
-
-  /* It shouldn't happen when dealing with TCP sockets.  */
-  if (!emacs_pid) return;
-
-  user32 = GetModuleHandle ("user32.dll");
-
-  if (!user32)
-    return;
-
-  /* Modern Windows restrict which processes can set the foreground window.
-     emacsclient can allow Emacs to grab the focus by calling the function
-     AllowSetForegroundWindow.  Unfortunately, older Windows (W95, W98 and
-     NT) lack this function, so we have to check its availability.  */
-  if ((set_fg = GetProcAddress (user32, "AllowSetForegroundWindow"))
-      && (get_wc = GetProcAddress (user32, "RealGetWindowClassA")))
-    EnumWindows (w32_find_emacs_process, (LPARAM) 0);
-}
-#endif /* HAVE_NTGUI */
-
 /* Start the emacs daemon and try to connect to it.  */
 
 static void
@@ -1326,14 +1238,6 @@ main (int argc, char **argv)
   main_argv = argv;
   progname = argv[0];
 
-#ifdef HAVE_NTGUI
-  /* On Windows 7 and later, we need to explicitly associate
-     emacsclient with emacs so the UI behaves sensibly.  This
-     association does no harm if we're not actually connecting to an
-     Emacs using a window display.  */
-  w32_set_user_model_id ();
-#endif /* HAVE_NTGUI */
-
   /* Process options.  */
   decode_options (argc, argv);
 
@@ -1374,11 +1278,6 @@ main (int argc, char **argv)
 	       "Cannot get current working directory");
       fail ();
     }
-
-#ifdef HAVE_NTGUI
-  if (display && !strcmp (display, "w32"))
-  w32_give_focus ();
-#endif /* HAVE_NTGUI */
 
   /* Send over our environment and current directory. */
   if (!current_frame)

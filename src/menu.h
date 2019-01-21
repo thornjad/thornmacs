@@ -35,8 +35,7 @@ extern void discard_menu_items (void);
 extern void save_menu_items (void);
 extern bool parse_single_submenu (Lisp_Object, Lisp_Object, Lisp_Object);
 extern void list_of_panes (Lisp_Object);
-#if defined (USE_GTK) || defined (HAVE_NTGUI) \
-  || defined (HAVE_NS)
+#if defined (USE_GTK) || defined (HAVE_NS)
 extern void free_menubar_widget_value_tree (widget_value *);
 extern void update_submenu_strings (widget_value *);
 extern void find_and_call_menu_selection (struct frame *, int,
@@ -48,10 +47,6 @@ extern widget_value *digest_single_submenu (int, int, bool);
 #if defined (HAVE_X_WINDOWS)
 extern Lisp_Object x_menu_show (struct frame *, int, int, int,
 				Lisp_Object, const char **);
-#endif
-#ifdef HAVE_NTGUI
-extern Lisp_Object w32_menu_show (struct frame *, int, int, int,
-				  Lisp_Object, const char **);
 #endif
 #ifdef HAVE_NS
 extern Lisp_Object ns_menu_show (struct frame *, int, int, int,

@@ -907,11 +907,6 @@ extern void syms_of_xftfont (void);
 extern void syms_of_bdffont (void);
 #endif	/* HAVE_BDFFONT */
 #endif	/* HAVE_X_WINDOWS */
-#ifdef HAVE_NTGUI
-extern struct font_driver w32font_driver;
-extern struct font_driver uniscribe_font_driver;
-extern void syms_of_w32font (void);
-#endif	/* HAVE_NTGUI */
 #ifdef HAVE_NS
 extern struct font_driver const nsfont_driver;
 extern void syms_of_nsfont (void);

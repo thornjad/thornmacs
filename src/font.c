@@ -5450,9 +5450,6 @@ footprint in sessions that use lots of different fonts.  */);
 #ifdef HAVE_BDFFONT
   syms_of_bdffont ();
 #endif	/* HAVE_BDFFONT */
-#ifdef HAVE_NTGUI
-  syms_of_w32font ();
-#endif	/* HAVE_NTGUI */
 #endif	/* HAVE_WINDOW_SYSTEM */
 }
 

@@ -24,7 +24,6 @@ USG5_4
 
 ** Distinguishing GUIs **
 
-HAVE_NTGUI	Use the native W32 GUI for windows, frames, menus&scrollbars.
 HAVE_NS		Use the NeXT/OpenStep/Cocoa UI under macOS or GNUstep.
 NS_IMPL_GNUSTEP	Compile support for GNUstep implementation of NS GUI API.
 NS_IMPL_COCOA	Compile support for Cocoa (Apple) implementation of NS GUI API.

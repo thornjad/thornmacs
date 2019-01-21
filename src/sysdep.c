@@ -2279,13 +2279,11 @@ emacs_backtrace (int backtrace_limit)
     }
 }
 
-#ifndef HAVE_NTGUI
 void
 emacs_abort (void)
 {
   terminate_due_to_signal (SIGABRT, 40);
 }
-#endif
 
 /* Open FILE for Emacs use, using open flags OFLAG and mode MODE.
    Use binary I/O on systems that care about text vs binary I/O.

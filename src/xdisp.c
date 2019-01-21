@@ -12129,8 +12129,7 @@ update_menu_bar (struct frame *f, bool save_match_data, bool hooks_run)
 
   if (FRAME_WINDOW_P (f)
       ?
-#if defined (HAVE_NTGUI) \
-    || defined (HAVE_NS) || defined (USE_GTK)
+#if defined (HAVE_NS) || defined (USE_GTK)
       FRAME_EXTERNAL_MENU_BAR (f)
 #else
       FRAME_MENU_BAR_LINES (f) > 0
@@ -12183,8 +12182,7 @@ update_menu_bar (struct frame *f, bool save_match_data, bool hooks_run)
 	  fset_menu_bar_items (f, menu_bar_items (FRAME_MENU_BAR_ITEMS (f)));
 
 	  /* Redisplay the menu bar in case we changed it.  */
-#if defined (HAVE_NTGUI) \
-    || defined (HAVE_NS) || defined (USE_GTK)
+#if defined (HAVE_NS) || defined (USE_GTK)
 	  if (FRAME_WINDOW_P (f))
             {
 #if defined (HAVE_NS)
@@ -12198,11 +12196,11 @@ update_menu_bar (struct frame *f, bool save_match_data, bool hooks_run)
 	    /* On a terminal screen, the menu bar is an ordinary screen
 	       line, and this makes it get updated.  */
 	    w->update_mode_line = true;
-#else /* ! (HAVE_NTGUI || HAVE_NS || USE_GTK) */
+#else /* ! HAVE_NS || USE_GTK) */
 	  /* In the non-toolkit version, the menu bar is an ordinary screen
 	     line, and this makes it get updated.  */
 	  w->update_mode_line = true;
-#endif /* ! (HAVE_NTGUI || HAVE_NS || USE_GTK) */
+#endif /* || HAVE_NS || USE_GTK) */
 
 	  unbind_to (count, Qnil);
 	  set_buffer_internal_1 (prev);
@@ -17506,8 +17504,7 @@ redisplay_window (Lisp_Object window, bool just_this_one_p)
 
       if (FRAME_WINDOW_P (f))
 	{
-#if defined (HAVE_NTGUI) \
-    || defined (HAVE_NS) || defined (USE_GTK)
+#if defined (HAVE_NS) || defined (USE_GTK)
 	  redisplay_menu_p = FRAME_EXTERNAL_MENU_BAR (f);
 #else
 	  redisplay_menu_p = FRAME_MENU_BAR_LINES (f) > 0;
@@ -22922,7 +22919,7 @@ Emacs UBA implementation, in particular with the test suite.  */)
 }
 
 
-
+
 /***********************************************************************
 			       Menu Bar
  ***********************************************************************/
@@ -22946,10 +22943,6 @@ display_menu_bar (struct window *w)
   int i;
 
   /* Don't do all this for graphical frames.  */
-#ifdef HAVE_NTGUI
-  if (FRAME_W32_P (f))
-    return;
-#endif
 #if defined (USE_GTK)
   if (FRAME_X_P (f))
     return;
@@ -25461,7 +25454,7 @@ get_font_ascent_descent (struct font *font, int *ascent, int *descent)
 #endif
 }
 
-
+
 /***********************************************************************
 			     Glyph Display
  ***********************************************************************/
@@ -25497,13 +25490,6 @@ dump_glyph_string (struct glyph_string *s)
    index of the first glyph structure covered by S.  HL is a
    face-override for drawing S.  */
 
-#ifdef HAVE_NTGUI
-#define OPTIONAL_HDC(hdc)  HDC hdc,
-#define DECLARE_HDC(hdc)   HDC hdc;
-#define ALLOCATE_HDC(hdc, f) hdc = get_frame_dc ((f))
-#define RELEASE_HDC(hdc, f)  release_frame_dc ((f), (hdc))
-#endif
-
 #ifndef OPTIONAL_HDC
 #define OPTIONAL_HDC(hdc)
 #define DECLARE_HDC(hdc)
@@ -25520,9 +25506,6 @@ init_glyph_string (struct glyph_string *s,
   memset (s, 0, sizeof *s);
   s->w = w;
   s->f = XFRAME (w->frame);
-#ifdef HAVE_NTGUI
-  s->hdc = hdc;
-#endif
   s->display = FRAME_X_DISPLAY (s->f);
   s->char2b = char2b;
   s->hl = hl;
@@ -26268,15 +26251,8 @@ compute_overhangs_and_x (struct glyph_string *s, int x, bool backward_p)
    as well as the following local variables:
      `s', `f', and `hdc' (in W32)  */
 
-#ifdef HAVE_NTGUI
-/* On W32, silently add local `hdc' variable to argument list of
-   init_glyph_string.  */
-#define INIT_GLYPH_STRING(s, char2b, w, row, area, start, hl) \
-  init_glyph_string (s, hdc, char2b, w, row, area, start, hl)
-#else
 #define INIT_GLYPH_STRING(s, char2b, w, row, area, start, hl) \
   init_glyph_string (s, char2b, w, row, area, start, hl)
-#endif
 
 /* Add a glyph string for a stretch glyph to the list of strings
    between HEAD and TAIL.  START is the index of the stretch glyph in
@@ -33195,11 +33171,6 @@ cancel_hourglass (void)
 	  if (FRAME_LIVE_P (f) && FRAME_WINDOW_P (f)
 	      && FRAME_RIF (f)->hide_hourglass)
 	    FRAME_RIF (f)->hide_hourglass (f);
-#ifdef HAVE_NTGUI
-	  /* No cursors on non GUI frames - restore to stock arrow cursor.  */
-	  else if (!FRAME_W32_P (f))
-	    w32_arrow_cursor ();
-#endif
 	}
 
       hourglass_shown_p = false;

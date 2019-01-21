@@ -364,7 +364,6 @@ extern void unuse_menu_items (void);
    isn't defined.  The use of HAVE_MULTILINGUAL_MENU could probably be
    confined to an extended version of this with sections of code below
    using it unconditionally.  */
-#ifndef HAVE_NTGUI
 #if defined (USE_GTK) || defined (HAVE_NS)
 # define ENCODE_MENU_STRING(str) ENCODE_UTF_8 (str)
 #elif defined HAVE_X_I18N
@@ -372,9 +371,6 @@ extern void unuse_menu_items (void);
 #else
 #define ENCODE_MENU_STRING(str) string_make_unibyte (str)
 #endif /* USE_GTK  */
-#else /* HAVE_NTGUI */
-#define ENCODE_MENU_STRING(str) (str)
-#endif
 
 /* Macros for dealing with lispy events.  */
 
@@ -491,10 +487,6 @@ extern bool volatile pending_signals;
 extern void process_pending_signals (void);
 extern struct timespec timer_check (void);
 extern void mark_kboards (void);
-
-#ifdef HAVE_NTGUI
-extern const char *const lispy_function_keys[];
-#endif
 
 extern char const DEV_TTY[];
 
