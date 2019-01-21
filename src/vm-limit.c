@@ -101,21 +101,10 @@ get_lim_data (void)
        : SIZE_MAX);
 }
 
-#elif defined WINDOWSNT
-
-#include "w32heap.h"
-
-static void
-get_lim_data (void)
-{
-  extern size_t reserved_heap_size;
-  lim_data = reserved_heap_size;
-}
-
 #else
 # error "get_lim_data not implemented on this machine"
 #endif
-
+
 /* Verify amount of memory available, complaining if we're near the end. */
 
 static void

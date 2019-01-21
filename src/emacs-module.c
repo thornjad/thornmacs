@@ -55,11 +55,6 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 
 /* Feature tests.  */
 
-#ifdef WINDOWSNT
-#include <windows.h>
-#include "w32term.h"
-#endif
-
 /* True if Lisp_Object and emacs_value have the same representation.
    This is typically true unless WIDE_EMACS_INT.  In practice, having
    the same sizes and alignments and maximums should be a good enough

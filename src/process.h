@@ -291,11 +291,6 @@ extern void delete_write_fd (int fd);
 extern void catch_child_signal (void);
 extern void restore_nofile_limit (void);
 
-#ifdef WINDOWSNT
-extern Lisp_Object network_interface_list (void);
-extern Lisp_Object network_interface_info (Lisp_Object);
-#endif
-
 extern Lisp_Object remove_slash_colon (Lisp_Object);
 
 extern void update_processes_for_thread_death (Lisp_Object);

@@ -65,15 +65,6 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include <netdb.h>
 #endif /* HAVE_SOCKETS */
 
-#ifdef WINDOWSNT
-#define read sys_read
-#define write sys_write
-#ifndef STDERR_FILENO
-#define STDERR_FILENO fileno(GetStdHandle(STD_ERROR_HANDLE))
-#endif
-#include "w32.h"
-#endif /* WINDOWSNT */
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
@@ -106,21 +97,11 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include "gnutls.h"
 /* MS-Windows loads GnuTLS at run time, if available; we don't want to
    do that during startup just to call gnutls_rnd.  */
-#if defined HAVE_GNUTLS && !defined WINDOWSNT
+#if defined HAVE_GNUTLS
 # include <gnutls/crypto.h>
 #else
 # define emacs_gnutls_global_init() Qnil
 # define gnutls_rnd(level, data, len) (-1)
-#endif
-
-#ifdef WINDOWSNT
-#include <direct.h>
-/* In process.h which conflicts with the local copy.  */
-#define _P_WAIT 0
-int _cdecl _spawnlp (int, const char *, const char *, ...);
-/* The following is needed for O_CLOEXEC, F_SETFD, FD_CLOEXEC, and
-   several prototypes of functions called below.  */
-#include <sys/socket.h>
 #endif
 
 #include "syssignal.h"
@@ -324,13 +305,11 @@ emacs_get_current_dir_name (void)
   return dir;
 }
 
-
 /* Discard pending input on all input descriptors.  */
 
 void
 discard_tty_input (void)
 {
-#ifndef WINDOWSNT
   struct emacs_tty buf;
 
   if (noninteractive)
@@ -347,10 +326,8 @@ discard_tty_input (void)
           }
       }
   }
-#endif /* not WINDOWSNT */
 }
 
-
 #ifdef SIGTSTP
 
 /* Arrange for character C to be read as the next input from
@@ -481,7 +458,6 @@ child_status_changed (pid_t child, int *status, int options)
   return get_child_status (child, status, WNOHANG | options, 0);
 }
 
-
 /*  Set up the terminal at the other end of a pseudo-terminal that
     we will be controlling an inferior through.
     It should not echo or do line-editing, since that is done
@@ -490,7 +466,6 @@ child_status_changed (pid_t child, int *status, int options)
 void
 child_setup_tty (int out)
 {
-#ifndef WINDOWSNT
   struct emacs_tty s;
 
   emacs_get_tty (out, &s);
@@ -572,7 +547,6 @@ child_setup_tty (int out)
 #endif
 
   emacs_set_tty (out, &s, 0);
-#endif /* not WINDOWSNT */
 }
 
 
@@ -668,17 +642,9 @@ sys_subshell (void)
 #endif
 	}
 
-#ifdef  WINDOWSNT
-      /* Waits for process completion */
-      pid = _spawnlp (_P_WAIT, sh, sh, NULL);
-      chdir (oldwd);	/* FIXME: Do the right thing on chdir failure.  */
-      if (pid == -1)
-	write (1, "Can't execute subshell", 22);
-#else   /* not WINDOWSNT */
       execlp (sh, sh, (char *) 0);
       emacs_perror (sh);
       _exit (errno == ENOENT ? EXIT_ENOENT : EXIT_CANNOT_INVOKE);
-#endif  /* not WINDOWSNT */
     }
 
 #ifndef DOS_NT
@@ -902,7 +868,7 @@ widen_foreground_group (int fd)
   if (inherited_pgroup && setpgid (0, inherited_pgroup) == 0)
     tcsetpgrp_without_stopping (fd, inherited_pgroup);
 }
-
+
 /* Getting and setting emacs_tty structures.  */
 
 /* Set *TC to the parameters associated with the terminal FD,
@@ -913,22 +879,8 @@ emacs_get_tty (int fd, struct emacs_tty *settings)
 {
   /* Retrieve the primary parameters - baud rate, character size, etcetera.  */
   memset (&settings->main, 0, sizeof (settings->main));
-#ifdef DOS_NT
-#ifdef WINDOWSNT
-  HANDLE h = (HANDLE)_get_osfhandle (fd);
-  DWORD console_mode;
-
-  if (h && h != INVALID_HANDLE_VALUE && GetConsoleMode (h, &console_mode))
-    {
-      settings->main = console_mode;
-      return 0;
-    }
-#endif	/* WINDOWSNT */
-  return -1;
-#else	/* !DOS_NT */
   /* We have those nifty POSIX tcmumbleattr functions.  */
   return tcgetattr (fd, &settings->main);
-#endif
 }
 
 
@@ -940,22 +892,6 @@ int
 emacs_set_tty (int fd, struct emacs_tty *settings, bool flushp)
 {
   /* Set the primary parameters - baud rate, character size, etcetera.  */
-#ifdef DOS_NT
-#ifdef WINDOWSNT
-  HANDLE h = (HANDLE)_get_osfhandle (fd);
-
-  if (h && h != INVALID_HANDLE_VALUE)
-    {
-      DWORD new_mode;
-
-      /* Assume the handle is open for input.  */
-      if (flushp)
-	FlushConsoleInputBuffer (h);
-      new_mode = settings->main;
-      SetConsoleMode (h, new_mode);
-    }
-#endif	/* WINDOWSNT */
-#else  /* !DOS_NT */
   int i;
   /* We have those nifty POSIX tcmumbleattr functions.
      William J. Smith <wjs@wiis.wang.com> writes:
@@ -993,13 +929,11 @@ emacs_set_tty (int fd, struct emacs_tty *settings, bool flushp)
 	else
 	  continue;
       }
-#endif
 
   /* We have survived the tempest.  */
   return 0;
 }
 
-
 
 #ifdef F_SETOWN
 static int old_fcntl_owner[FD_SETSIZE];
@@ -1300,13 +1234,8 @@ suppress_echo_on_tty (int fd)
   struct emacs_tty etty;
 
   emacs_get_tty (fd, &etty);
-#ifdef DOS_NT
-  /* Set raw input mode.  */
-  etty.main = 0;
-#else
   etty.main.c_lflag &= ~ICANON;	/* Disable buffering */
   etty.main.c_lflag &= ~ECHO;	/* Disable echoing */
-#endif /* ! WINDOWSNT */
   emacs_set_tty (fd, &etty, 0);
 }
 
@@ -1342,17 +1271,6 @@ get_tty_size (int fd, int *widthp, int *heightp)
       *widthp = size.ts_cols;
       *heightp = size.ts_lines;
     }
-
-#elif defined WINDOWSNT
-
-  CONSOLE_SCREEN_BUFFER_INFO info;
-  if (GetConsoleScreenBufferInfo (GetStdHandle (STD_OUTPUT_HANDLE), &info))
-    {
-      *widthp = info.srWindow.Right - info.srWindow.Left + 1;
-      *heightp = info.srWindow.Bottom - info.srWindow.Top + 1;
-    }
-  else
-    *widthp = *heightp = 0;
 
 #else /* system doesn't know size */
 
@@ -1734,7 +1652,7 @@ handle_arith_signal (int sig)
   xsignal0 (Qarith_error);
 }
 
-#if defined HAVE_STACK_OVERFLOW_HANDLING && !defined WINDOWSNT
+#if defined HAVE_STACK_OVERFLOW_HANDLING
 
 /* Alternate stack used by SIGSEGV handler below.  */
 
@@ -1833,7 +1751,7 @@ init_sigsegv (void)
   return sigaction (SIGSEGV, &sa, NULL) < 0 ? 0 : 1;
 }
 
-#else /* not HAVE_STACK_OVERFLOW_HANDLING or WINDOWSNT */
+#else /* not HAVE_STACK_OVERFLOW_HANDLING */
 
 static bool
 init_sigsegv (void)
@@ -1841,7 +1759,7 @@ init_sigsegv (void)
   return 0;
 }
 
-#endif /* HAVE_STACK_OVERFLOW_HANDLING && !WINDOWSNT */
+#endif /* HAVE_STACK_OVERFLOW_HANDLING */
 
 static void
 deliver_arith_signal (int sig)
@@ -2227,16 +2145,12 @@ init_random (void)
 
   /* First, try seeding the PRNG from the operating system's entropy
      source.  This approach is both fast and secure.  */
-#ifdef WINDOWSNT
-  success = w32_init_random (&v, sizeof v) == 0;
-#else
   int fd = emacs_open ("/dev/urandom", O_RDONLY, 0);
   if (0 <= fd)
     {
       success = emacs_read (fd, &v, sizeof v) == sizeof v;
       close (fd);
     }
-#endif
 
   /* If that didn't work, try using GnuTLS, which is secure, but on
      some systems, can be somewhat slow.  */
@@ -2504,14 +2418,6 @@ verify (MAX_RW_COUNT <= PTRDIFF_MAX);
 verify (MAX_RW_COUNT <= SIZE_MAX);
 verify (MAX_RW_COUNT <= SSIZE_MAX);
 
-#ifdef WINDOWSNT
-/* Verify that Emacs read requests cannot cause trouble, even in
-   64-bit builds.  The last argument of 'read' is 'unsigned int', and
-   the return value's type (see 'sys_read') is 'int'.  */
-verify (MAX_RW_COUNT <= INT_MAX);
-verify (MAX_RW_COUNT <= UINT_MAX);
-#endif
-
 /* Read from FD to a buffer BUF with size NBYTE.
    If interrupted, process any quits and pending signals immediately
    if INTERRUPTIBLE, and then retry the read unless quitting.
@@ -2699,10 +2605,6 @@ renameat_noreplace (int srcfd, char const *src, int dstfd, char const *dst)
 #elif defined RENAME_EXCL
   return renameatx_np (srcfd, src, dstfd, dst, RENAME_EXCL);
 #else
-# ifdef WINDOWSNT
-  if (srcfd == AT_FDCWD && dstfd == AT_FDCWD)
-    return sys_rename_replace (src, dst, 0);
-# endif
   errno = ENOSYS;
   return -1;
 #endif
@@ -2998,16 +2900,7 @@ list_system_processes (void)
   return  proclist;
 }
 
-/* The WINDOWSNT implementation is in w32.c. */
-#elif !defined (WINDOWSNT)
-
-Lisp_Object
-list_system_processes (void)
-{
-  return Qnil;
-}
-
-#endif /* !defined (WINDOWSNT) */
+#endif /* !defined DARWIN_OS or __FreeBSD__ */
 
 #if defined GNU_LINUX && defined HAVE_LONG_LONG_INT
 static struct timespec
@@ -3852,17 +3745,8 @@ system_process_attributes (Lisp_Object pid)
   return attrs;
 }
 
-/* The WINDOWSNT implementation is in w32.c. */
-#elif !defined (WINDOWSNT)
+#endif
 
-Lisp_Object
-system_process_attributes (Lisp_Object pid)
-{
-  return Qnil;
-}
-
-#endif	/* !defined (WINDOWSNT) */
-
 /* Wide character string collation.  */
 
 #ifdef __STDC_ISO_10646__
@@ -4048,22 +3932,3 @@ str_collate (Lisp_Object s1, Lisp_Object s2,
   return res;
 }
 #endif  /* __STDC_ISO_10646__ */
-
-#ifdef WINDOWSNT
-int
-str_collate (Lisp_Object s1, Lisp_Object s2,
-	     Lisp_Object locale, Lisp_Object ignore_case)
-{
-
-  char *loc = STRINGP (locale) ? SSDATA (locale) : NULL;
-  int res, err = errno;
-
-  errno = 0;
-  res = w32_compare_strings (SSDATA (s1), SSDATA (s2), loc, !NILP (ignore_case));
-  if (errno)
-    error ("Invalid string for collation: %s", strerror (errno));
-
-  errno = err;
-  return res;
-}
-#endif	/* WINDOWSNT */

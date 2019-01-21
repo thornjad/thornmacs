@@ -49,11 +49,6 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include "cm.h"
 #include "menu.h"
 
-/* The name of the default console device.  */
-#ifdef WINDOWSNT
-#include "w32term.h"
-#endif
-
 static void tty_set_scroll_region (struct frame *f, int start, int stop);
 static void turn_on_face (struct frame *, int face_id);
 static void turn_off_face (struct frame *, int face_id);
@@ -324,11 +319,7 @@ tty_hide_cursor (struct tty_display_info *tty)
   if (tty->cursor_hidden == 0)
     {
       tty->cursor_hidden = 1;
-#ifdef WINDOWSNT
-      w32con_hide_cursor ();
-#else
       OUTPUT_IF (tty, tty->TS_cursor_invisible);
-#endif
     }
 }
 
@@ -341,13 +332,9 @@ tty_show_cursor (struct tty_display_info *tty)
   if (tty->cursor_hidden)
     {
       tty->cursor_hidden = 0;
-#ifdef WINDOWSNT
-      w32con_show_cursor ();
-#else
       OUTPUT_IF (tty, tty->TS_cursor_normal);
       if (visible_cursor)
         OUTPUT_IF (tty, tty->TS_cursor_visible);
-#endif
     }
 }
 
@@ -1215,7 +1202,6 @@ struct fkey_table {
   const char *cap, *name;
 };
 
-#ifndef DOS_NT
   /* Termcap capability names that correspond directly to X keysyms.
      Some of these (marked "terminfo") aren't supplied by old-style
      (Berkeley) termcap entries.  They're listed in X keysym order;
@@ -1443,8 +1429,6 @@ term_get_fkeys_1 (void)
 
   return Qnil;
 }
-#endif /* not DOS_NT */
-
 
 
 /***********************************************************************
@@ -2056,8 +2040,6 @@ TERMINAL does not refer to a text terminal.  */)
   return make_number (t ? t->display_info.tty->TN_max_colors : 0);
 }
 
-#ifndef DOS_NT
-
 /* Declare here rather than in the function, as in the rest of Emacs,
    to work around an HPUX compiler bug (?). See
    https://lists.gnu.org/r/emacs-devel/2007-08/msg00410.html  */
@@ -2160,8 +2142,6 @@ set_tty_color_mode (struct tty_display_info *tty, struct frame *f)
       safe_call (1, intern ("tty-set-up-initial-frame-faces"));
     }
 }
-
-#endif /* !DOS_NT */
 
 DEFUN ("tty-type", Ftty_type, Stty_type, 0, 1, 0,
        doc: /* Return the type of the tty device that TERMINAL uses.
@@ -3494,7 +3474,6 @@ tty_menu_new_item_coords (struct frame *f, int which, int *x, int *y)
     }
 }
 
-/* WINDOWSNT uses this as menu_show_hook, see w32console.c.  */
 Lisp_Object
 tty_menu_show (struct frame *f, int x, int y, int menuflags,
 	       Lisp_Object title, const char **error_name)
@@ -3903,13 +3882,11 @@ init_tty (const char *name, const char *terminal_type, bool must_succeed)
 {
   struct tty_display_info *tty = NULL;
   struct terminal *terminal = NULL;
-#ifndef DOS_NT
   char *area;
   char **address = &area;
   int status;
   sigset_t oldset;
   bool ctty = false;  /* True if asked to open controlling tty.  */
-#endif
 
   if (!terminal_type)
     maybe_fatal (must_succeed, 0,
@@ -3918,10 +3895,8 @@ init_tty (const char *name, const char *terminal_type, bool must_succeed)
 
   if (name == NULL)
     name = DEV_TTY;
-#ifndef DOS_NT
   if (!strcmp (name, DEV_TTY))
     ctty = 1;
-#endif
 
   /* If we already have a terminal on the given device, use that.  If
      all such terminals are suspended, create a new one instead.  */
@@ -3948,7 +3923,6 @@ init_tty (const char *name, const char *terminal_type, bool must_succeed)
   encode_terminal_dst_size = 0;
 
 
-#ifndef DOS_NT
   set_tty_hooks (terminal);
 
   {
@@ -4156,49 +4130,6 @@ use the Bourne shell command 'TERM=...; export TERM' (C-shell:\n\
   tty->TF_underscore = tgetflag ("ul");
   tty->TF_teleray = tgetflag ("xt");
 
-#else /* DOS_NT */
-#ifdef WINDOWSNT
-  {
-    struct frame *f = XFRAME (selected_frame);
-    int height, width;
-
-    initialize_w32_display (terminal, &width, &height);
-
-    FrameRows (tty) = height;
-    FrameCols (tty) = width;
-    tty->specified_window = height;
-
-    FRAME_VERTICAL_SCROLL_BAR_TYPE (f) = vertical_scroll_bar_none;
-    FRAME_HAS_HORIZONTAL_SCROLL_BARS (f) = 0;
-    tty->char_ins_del_ok = 1;
-    baud_rate = 19200;
-  }
-#endif	/* WINDOWSNT */
-  tty->output = stdout;
-  tty->input = stdin;
-  /* The following two are inaccessible from w32console.c.  */
-  terminal->delete_frame_hook = &tty_free_frame_resources;
-  terminal->delete_terminal_hook = &delete_tty;
-
-  tty->name = xstrdup (name);
-  terminal->name = xstrdup (name);
-  tty->type = xstrdup (terminal_type);
-
-  add_keyboard_wait_descriptor (0);
-
-  tty->delete_in_insert_mode = 1;
-
-  UseTabs (tty) = 0;
-  tty->scroll_region_ok = 0;
-
-  /* Seems to insert lines when it's not supposed to, messing up the
-     display.  In doing a trace, it didn't seem to be called much, so I
-     don't think we're losing anything by turning it off.  */
-  tty->line_ins_del_ok = 0;
-
-  tty->TN_max_colors = 16;  /* Must be non-zero for tty-display-color-p.  */
-#endif	/* DOS_NT */
-
 #ifdef HAVE_GPM
   terminal->mouse_position_hook = term_mouse_position;
   tty->mouse_highlight.mouse_face_window = Qnil;
@@ -4211,7 +4142,6 @@ use the Bourne shell command 'TERM=...; export TERM' (C-shell:\n\
      prompt in the mini-buffer.  */
   if (current_kboard == initial_kboard)
     current_kboard = terminal->kboard;
-#ifndef DOS_NT
   term_get_fkeys (address, terminal->kboard);
 
   /* Get frame size from system, or else from termcap.  */
@@ -4341,8 +4271,6 @@ use the Bourne shell command 'TERM=...; export TERM' (C-shell:\n\
        && (tty->TS_del_char || tty->TS_del_multi_chars));
 
   init_baud_rate (fileno (tty->input));
-
-#endif /* not DOS_NT */
 
   /* Init system terminal modes (RAW or CBREAK, etc.).  */
   init_sys_modes (tty);
@@ -4494,11 +4422,9 @@ bigger, or it may make it blink, or it may do nothing at all.  */);
   defsubr (&Sgpm_mouse_stop);
 #endif /* HAVE_GPM */
 
-#ifndef DOS_NT
   default_orig_pair = NULL;
   default_set_foreground = NULL;
   default_set_background = NULL;
-#endif /* !DOS_NT */
 
   encode_terminal_src = NULL;
   encode_terminal_dst = NULL;

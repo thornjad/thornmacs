@@ -4288,9 +4288,6 @@ extern bool display_arg;
 extern Lisp_Object decode_env_path (const char *, const char *, bool);
 extern Lisp_Object empty_unibyte_string, empty_multibyte_string;
 extern _Noreturn void terminate_due_to_signal (int, int);
-#ifdef WINDOWSNT
-extern Lisp_Object Vlibrary_cache;
-#endif
 #if HAVE_SETLOCALE
 void fixup_locale (void);
 void synchronize_system_messages_locale (void);
@@ -4312,16 +4309,10 @@ extern bool no_site_lisp;
 /* True means put details like time stamps into builds.  */
 extern bool build_details;
 
-#ifndef WINDOWSNT
 /* 0 not a daemon, 1 foreground daemon, 2 background daemon.  */
 extern int daemon_type;
 #define IS_DAEMON (daemon_type != 0)
 #define DAEMON_RUNNING (daemon_type >= 0)
-#else  /* WINDOWSNT */
-extern void *w32_daemon_event;
-#define IS_DAEMON (w32_daemon_event != NULL)
-#define DAEMON_RUNNING (w32_daemon_event != INVALID_HANDLE_VALUE)
-#endif
 
 /* True if handling a fatal error already.  */
 extern bool fatal_error_in_progress;

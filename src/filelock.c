@@ -48,11 +48,6 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include "lisp.h"
 #include "buffer.h"
 #include "coding.h"
-#ifdef WINDOWSNT
-#include <share.h>
-#include <sys/socket.h>	/* for fcntl */
-#include "w32.h"	/* for dostounix_filename */
-#endif
 
 #ifdef HAVE_UTMP_H
 #include <utmp.h>
@@ -66,7 +61,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #define BOOT_TIME_FILE "/var/run/random-seed"
 #endif
 
-#if !defined WTMP_FILE && !defined WINDOWSNT
+#if !defined WTMP_FILE
 #define WTMP_FILE "/var/log/wtmp"
 #endif
 
@@ -329,9 +324,6 @@ enum { LINKS_MIGHT_NOT_WORK = EPERM };
 static int
 rename_lock_file (char const *old, char const *new, bool force)
 {
-#ifdef WINDOWSNT
-  return sys_rename_replace (old, new, force);
-#else
   if (! force)
     {
       struct stat st;
@@ -360,7 +352,6 @@ rename_lock_file (char const *old, char const *new, bool force)
     }
 
   return rename (old, new);
-#endif
 }
 
 /* Create the lock file LFNAME with contents LOCK_INFO_STR.  Return 0 if
@@ -370,15 +361,7 @@ rename_lock_file (char const *old, char const *new, bool force)
 static int
 create_lock_file (char *lfname, char *lock_info_str, bool force)
 {
-#ifdef WINDOWSNT
-  /* Symlinks are supported only by later versions of Windows, and
-     creating them is a privileged operation that often triggers
-     User Account Control elevation prompts.  Avoid the problem by
-     pretending that 'symlink' does not work.  */
-  int err = ENOSYS;
-#else
   int err = symlink (lock_info_str, lfname) == 0 ? 0 : errno;
-#endif
 
   if (err == EEXIST && force)
     {
@@ -671,12 +654,6 @@ lock_file (Lisp_Object fn)
 
   orig_fn = fn;
   fn = Fexpand_file_name (fn, Qnil);
-#ifdef WINDOWSNT
-  /* Ensure we have only '/' separators, to avoid problems with
-     looking (inside fill_in_lock_file_name) for backslashes in file
-     names encoded by some DBCS codepage.  */
-  dostounix_filename (SSDATA (fn));
-#endif
   encoded_fn = ENCODE_FILE (fn);
 
   /* See if this file is visited and has changed on disk since it was

@@ -39,10 +39,6 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include <float.h>
 #include <ftoastr.h>
 
-#ifdef WINDOWSNT
-# include <sys/socket.h> /* for F_DUPFD_CLOEXEC */
-#endif
-
 struct terminal;
 
 /* Avoid actual stack overflow in print.  */
@@ -229,12 +225,6 @@ printchar_to_stream (unsigned int ch, FILE *stream)
       if (ASCII_CHAR_P (ch))
 	{
 	  putc_unlocked (ch, stream);
-#ifdef WINDOWSNT
-	  /* Send the output to a debugger (nothing happens if there
-	     isn't one).  */
-	  if (print_output_debug_flag && stream == stderr)
-	    OutputDebugString ((char []) {ch, '\0'});
-#endif
 	}
       else
 	{
@@ -247,10 +237,6 @@ printchar_to_stream (unsigned int ch, FILE *stream)
 	    encoded_ch = code_convert_string_norecord (encoded_ch,
 						       coding_system, true);
 	  fwrite_unlocked (SSDATA (encoded_ch), 1, SBYTES (encoded_ch), stream);
-#ifdef WINDOWSNT
-	  if (print_output_debug_flag && stream == stderr)
-	    OutputDebugString (SSDATA (encoded_ch));
-#endif
 	}
 
       i++;

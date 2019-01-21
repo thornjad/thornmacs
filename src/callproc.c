@@ -31,13 +31,6 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 
 #include "lisp.h"
 
-#ifdef WINDOWSNT
-#include <sys/socket.h>	/* for fcntl */
-#include <windows.h>
-#include "w32.h"
-#define _P_NOWAIT 1	/* from process.h */
-#endif
-
 #include "commands.h"
 #include "buffer.h"
 #include "coding.h"
@@ -447,10 +440,6 @@ call_process (ptrdiff_t nargs, Lisp_Object *args, int filefd,
   block_input ();
   block_child_signal (&oldset);
 
-#ifdef WINDOWSNT
-  pid = child_setup (filefd, fd_output, fd_error, new_argv, 0, current_dir);
-#else  /* not WINDOWSNT */
-
   /* vfork, and prevent local vars from being clobbered by the vfork.  */
   {
     Lisp_Object volatile buffer_volatile = buffer;
@@ -521,8 +510,6 @@ call_process (ptrdiff_t nargs, Lisp_Object *args, int filefd,
 
       child_setup (filefd, fd_output, fd_error, new_argv, 0, current_dir);
     }
-
-#endif /* not WINDOWSNT */
 
   child_errno = errno;
 
@@ -802,21 +789,6 @@ create_temp_file (ptrdiff_t nargs, Lisp_Object *args,
     char *tempfile;
     ptrdiff_t count;
 
-#ifdef WINDOWSNT
-    /* Cannot use the result of Fexpand_file_name, because it
-       downcases the XXXXXX part of the pattern, and mktemp then
-       doesn't recognize it.  */
-    if (!NILP (Vw32_downcase_file_names))
-      {
-	Lisp_Object dirname = Ffile_name_directory (pattern);
-
-	if (NILP (dirname))
-	  pattern = Vtemp_file_name_pattern;
-	else
-	  pattern = concat2 (dirname, Vtemp_file_name_pattern);
-      }
-#endif
-
     filename_string = Fcopy_sequence (ENCODE_FILE (pattern));
     tempfile = SSDATA (filename_string);
 
@@ -1046,12 +1018,7 @@ child_setup (int in, int out, int err, char **new_argv, bool set_pgrp,
 {
   char **env;
   char *pwd_var;
-#ifdef WINDOWSNT
-  int cpid;
-  HANDLE handles[3];
-#else
   pid_t pid = getpid ();
-#endif /* WINDOWSNT */
 
   /* Note that use of alloca is always safe here.  It's obvious for systems
      that do not have true vfork or that have true (stack) alloca.
@@ -1168,20 +1135,6 @@ child_setup (int in, int out, int err, char **new_argv, bool set_pgrp,
       }
   }
 
-
-#ifdef WINDOWSNT
-  prepare_standard_handles (in, out, err, handles);
-  set_process_dir (SSDATA (current_dir));
-  /* Spawn the child.  (See w32proc.c:sys_spawnve).  */
-  cpid = spawnve (_P_NOWAIT, new_argv[0], new_argv, env);
-  reset_standard_handles (in, out, err, handles);
-  if (cpid == -1)
-    /* An error occurred while trying to spawn the process.  */
-    report_file_error ("Spawning child process", Qnil);
-  return cpid;
-
-#else  /* not WINDOWSNT */
-
   restore_nofile_limit ();
 
   /* Redirect file descriptors and clear the close-on-exec flag on the
@@ -1196,8 +1149,6 @@ child_setup (int in, int out, int err, char **new_argv, bool set_pgrp,
 
   int errnum = emacs_exec_file (new_argv[0], new_argv, env);
   exec_failed (new_argv[0], errnum);
-
-#endif  /* not WINDOWSNT */
 }
 
 static bool
@@ -1209,12 +1160,7 @@ getenv_internal_1 (const char *var, ptrdiff_t varlen, char **value,
       Lisp_Object entry = XCAR (env);
       if (STRINGP (entry)
 	  && SBYTES (entry) >= varlen
-#ifdef WINDOWSNT
-	  /* NT environment variables are case insensitive.  */
-	  && ! strnicmp (SSDATA (entry), var, varlen)
-#else  /* not WINDOWSNT */
 	  && ! memcmp (SDATA (entry), var, varlen)
-#endif /* not WINDOWSNT */
 	  )
 	{
 	  if (SBYTES (entry) > varlen && SREF (entry, varlen) == '=')
@@ -1243,20 +1189,6 @@ getenv_internal (const char *var, ptrdiff_t varlen, char **value,
   if (getenv_internal_1 (var, varlen, value, valuelen,
 			 Vprocess_environment))
     return *value ? 1 : 0;
-
-  /* On Windows we make some modifications to Emacs' environment
-     without recording them in Vprocess_environment.  */
-#ifdef WINDOWSNT
-  {
-    char *tmpval = getenv (var);
-    if (tmpval)
-      {
-        *value = tmpval;
-        *valuelen = strlen (tmpval);
-        return 1;
-      }
-  }
-#endif
 
   /* For DISPLAY try to get the values from the frame or the initial env.  */
   if (strcmp (var, "DISPLAY") == 0)

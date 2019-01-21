@@ -73,24 +73,6 @@ typedef struct x_bitmap_record Bitmap_Record;
 #define PIX_MASK_DRAW	1
 #endif /* HAVE_X_WINDOWS */
 
-#ifdef HAVE_NTGUI
-
-/* We need (or want) w32.h only when we're _not_ compiling for Cygwin.  */
-#ifdef WINDOWSNT
-# include "w32.h"
-#endif
-
-typedef struct w32_bitmap_record Bitmap_Record;
-#define GET_PIXEL(ximg, x, y) GetPixel (ximg, x, y)
-#define NO_PIXMAP 0
-
-#define PIX_MASK_RETAIN	0
-#define PIX_MASK_DRAW	1
-
-#define x_defined_color w32_defined_color
-
-#endif /* HAVE_NTGUI */
-
 #ifdef HAVE_NS
 typedef struct ns_bitmap_record Bitmap_Record;
 
@@ -104,7 +86,7 @@ typedef struct ns_bitmap_record Bitmap_Record;
 #endif /* HAVE_NS */
 
 #if (defined HAVE_X_WINDOWS \
-     && ! (defined HAVE_NTGUI || defined USE_CAIRO || defined HAVE_NS))
+     && ! (defined USE_CAIRO || defined HAVE_NS))
 /* W32_TODO : Color tables on W32.  */
 # define COLOR_TABLE_SUPPORT 1
 #endif
@@ -165,11 +147,10 @@ x_bitmap_width (struct frame *f, ptrdiff_t id)
 }
 #endif
 
-#if defined (HAVE_X_WINDOWS) || defined (HAVE_NTGUI)
+#if defined (HAVE_X_WINDOWS)
 ptrdiff_t
 x_bitmap_pixmap (struct frame *f, ptrdiff_t id)
 {
-  /* HAVE_NTGUI needs the explicit cast here.  */
   return (ptrdiff_t) FRAME_DISPLAY_INFO (f)->bitmaps[id - 1].pixmap;
 }
 #endif
@@ -227,17 +208,6 @@ x_create_bitmap_from_data (struct frame *f, char *bits, unsigned int width, unsi
     return -1;
 #endif /* HAVE_X_WINDOWS */
 
-#ifdef HAVE_NTGUI
-  Lisp_Object frame UNINIT;	/* The value is not used.  */
-  Pixmap bitmap;
-  bitmap = CreateBitmap (width, height,
-			 FRAME_DISPLAY_INFO (XFRAME (frame))->n_planes,
-			 FRAME_DISPLAY_INFO (XFRAME (frame))->n_cbits,
-			 bits);
-  if (! bitmap)
-    return -1;
-#endif /* HAVE_NTGUI */
-
 #ifdef HAVE_NS
   void *bitmap = ns_image_from_XBM (bits, width, height, 0, 0);
   if (!bitmap)
@@ -262,12 +232,6 @@ x_create_bitmap_from_data (struct frame *f, char *bits, unsigned int width, unsi
   dpyinfo->bitmaps[id - 1].depth = 1;
 #endif /* HAVE_X_WINDOWS */
 
-#ifdef HAVE_NTGUI
-  dpyinfo->bitmaps[id - 1].pixmap = bitmap;
-  dpyinfo->bitmaps[id - 1].hinst = NULL;
-  dpyinfo->bitmaps[id - 1].depth = 1;
-#endif /* HAVE_NTGUI */
-
   return id;
 }
 
@@ -276,11 +240,7 @@ x_create_bitmap_from_data (struct frame *f, char *bits, unsigned int width, unsi
 ptrdiff_t
 x_create_bitmap_from_file (struct frame *f, Lisp_Object file)
 {
-#ifdef HAVE_NTGUI
-  return -1;  /* W32_TODO : bitmap support */
-#else
   Display_Info *dpyinfo = FRAME_DISPLAY_INFO (f);
-#endif
 
 #ifdef HAVE_NS
   ptrdiff_t id;
@@ -357,10 +317,6 @@ free_bitmap_record (Display_Info *dpyinfo, Bitmap_Record *bm)
     XFreePixmap (dpyinfo->display, bm->mask);
 #endif /* HAVE_X_WINDOWS */
 
-#ifdef HAVE_NTGUI
-  DeleteObject (bm->pixmap);
-#endif /* HAVE_NTGUI */
-
 #ifdef HAVE_NS
   ns_release_object (bm->img);
 #endif
@@ -411,19 +367,12 @@ static bool x_create_x_image_and_pixmap (struct frame *, int, int, int,
 					 XImagePtr *, Pixmap *);
 static void x_destroy_x_image (XImagePtr ximg);
 
-#ifdef HAVE_NTGUI
-static XImagePtr_or_DC image_get_x_image_or_dc (struct frame *, struct image *,
-						bool, HGDIOBJ *);
-static void image_unget_x_image_or_dc (struct image *, bool, XImagePtr_or_DC,
-				       HGDIOBJ);
-#else
 static XImagePtr image_get_x_image (struct frame *, struct image *, bool);
 static void image_unget_x_image (struct image *, bool, XImagePtr);
 #define image_get_x_image_or_dc(f, img, mask_p, dummy)	\
   image_get_x_image (f, img, mask_p)
 #define image_unget_x_image_or_dc(img, mask_p, ximg, dummy)	\
   image_unget_x_image (img, mask_p, ximg)
-#endif
 
 #ifdef HAVE_X_WINDOWS
 
@@ -536,12 +485,7 @@ static void x_laplace (struct frame *, struct image *);
 static void x_emboss (struct frame *, struct image *);
 static void x_build_heuristic_mask (struct frame *, struct image *,
                                     Lisp_Object);
-#ifdef WINDOWSNT
-#define CACHE_IMAGE_TYPE(type, status) \
-  do { Vlibrary_cache = Fcons (Fcons (type, status), Vlibrary_cache); } while (0)
-#else
 #define CACHE_IMAGE_TYPE(type, status)
-#endif
 
 #define ADD_IMAGE_TYPE(type) \
   do { Vimage_types = Fcons (type, Vimage_types); } while (0)
@@ -564,14 +508,6 @@ define_image_type (struct image_type *type)
 
   if (type->init)
     {
-#if defined HAVE_NTGUI && defined WINDOWSNT
-      /* If we failed to load the library before, don't try again.  */
-      Lisp_Object tested = Fassq (builtin_lisp_symbol (new_type),
-				  Vlibrary_cache);
-      if (CONSP (tested) && NILP (XCDR (tested)))
-	type_valid = false;
-      else
-#endif
 	{
 	  type_valid = type->init ();
 	  CACHE_IMAGE_TYPE (builtin_lisp_symbol (new_type),
@@ -985,9 +921,6 @@ free_image (struct frame *f, struct image *img)
 
       /* Windows NT redefines 'free', but in this file, we need to
          avoid the redefinition.  */
-#ifdef WINDOWSNT
-#undef free
-#endif
       /* Free resources, then free IMG.  */
       img->type->free (f, img);
       xfree (img);
@@ -1070,11 +1003,6 @@ image_ascent (struct image *img, struct face *face, struct glyph_slice *slice)
     {
       if (face->font)
 	{
-#ifdef HAVE_NTGUI
-	  /* W32 specific version.  Why?. ++kfs  */
-	  ascent = height / 2 - (FONT_DESCENT (face->font)
-				 - FONT_BASE (face->font)) / 2;
-#else
 	  /* This expression is arranged so that if the image can't be
 	     exactly centered, it will be moved slightly up.  This is
 	     because a typical font is `top-heavy' (due to the presence
@@ -1082,7 +1010,6 @@ image_ascent (struct image *img, struct face *face, struct glyph_slice *slice)
 	     being top-heavy too.  It also just generally looks better.  */
 	  ascent = (height + FONT_BASE (face->font)
                     - FONT_DESCENT (face->font) + 1) / 2;
-#endif /* HAVE_NTGUI */
 	}
       else
 	ascent = height / 2;
@@ -1186,12 +1113,7 @@ four_corners_best (XImagePtr_or_DC ximg, int *corners,
 
 /* Portability macros */
 
-#ifdef HAVE_NTGUI
-
-#define Free_Pixmap(display, pixmap) \
-  DeleteObject (pixmap)
-
-#elif defined (HAVE_NS)
+#if defined (HAVE_NS)
 
 #define Free_Pixmap(display, pixmap) \
   ns_release_object (pixmap)
@@ -1201,7 +1123,7 @@ four_corners_best (XImagePtr_or_DC ximg, int *corners,
 #define Free_Pixmap(display, pixmap) \
   XFreePixmap (display, pixmap)
 
-#endif /* !HAVE_NTGUI && !HAVE_NS */
+#endif /* !HAVE_NS */
 
 
 /* Return the `background' field of IMG.  If IMG doesn't have one yet,
@@ -1216,9 +1138,6 @@ image_background (struct image *img, struct frame *f, XImagePtr_or_DC ximg)
     /* IMG doesn't have a background yet, try to guess a reasonable value.  */
     {
       bool free_ximg = !ximg;
-#ifdef HAVE_NTGUI
-      HGDIOBJ prev;
-#endif /* HAVE_NTGUI */
 
       if (free_ximg)
 	ximg = image_get_x_image_or_dc (f, img, 0, &prev);
@@ -1247,9 +1166,6 @@ image_background_transparent (struct image *img, struct frame *f, XImagePtr_or_D
       if (img->mask)
 	{
 	  bool free_mask = !mask;
-#ifdef HAVE_NTGUI
-	  HGDIOBJ prev;
-#endif /* HAVE_NTGUI */
 
 	  if (free_mask)
 	    mask = image_get_x_image_or_dc (f, img, 1, &prev);
@@ -1993,98 +1909,6 @@ x_create_x_image_and_pixmap (struct frame *f, int width, int height, int depth,
   return 1;
 #endif /* HAVE_X_WINDOWS */
 
-#ifdef HAVE_NTGUI
-
-  BITMAPINFOHEADER *header;
-  HDC hdc;
-  int scanline_width_bits;
-  int remainder;
-  int palette_colors = 0;
-
-  if (depth == 0)
-    depth = 24;
-
-  if (depth != 1 && depth != 4 && depth != 8
-      && depth != 16 && depth != 24 && depth != 32)
-    {
-      image_error ("Invalid image bit depth specified");
-      return 0;
-    }
-
-  scanline_width_bits = width * depth;
-  remainder = scanline_width_bits % 32;
-
-  if (remainder)
-    scanline_width_bits += 32 - remainder;
-
-  /* Bitmaps with a depth less than 16 need a palette.  */
-  /* BITMAPINFO structure already contains the first RGBQUAD.  */
-  if (depth < 16)
-    palette_colors = 1 << (depth - 1);
-
-  *ximg = xmalloc (sizeof (XImage) + palette_colors * sizeof (RGBQUAD));
-
-  header = &(*ximg)->info.bmiHeader;
-  memset (&(*ximg)->info, 0, sizeof (BITMAPINFO));
-  header->biSize = sizeof (*header);
-  header->biWidth = width;
-  header->biHeight = -height;  /* negative indicates a top-down bitmap.  */
-  header->biPlanes = 1;
-  header->biBitCount = depth;
-  header->biCompression = BI_RGB;
-  header->biClrUsed = palette_colors;
-
-  /* TODO: fill in palette.  */
-  if (depth == 1)
-    {
-      (*ximg)->info.bmiColors[0].rgbBlue = 0;
-      (*ximg)->info.bmiColors[0].rgbGreen = 0;
-      (*ximg)->info.bmiColors[0].rgbRed = 0;
-      (*ximg)->info.bmiColors[0].rgbReserved = 0;
-      /* bmiColors is a variable-length array declared by w32api
-	 headers as bmiColors[1], which triggers a warning under
-	 -Warray-bounds; shut that up.  */
-#     if GNUC_PREREQ (4, 4, 0)
-#      pragma GCC push_options
-#      pragma GCC diagnostic ignored "-Warray-bounds"
-#     endif
-      (*ximg)->info.bmiColors[1].rgbBlue = 255;
-      (*ximg)->info.bmiColors[1].rgbGreen = 255;
-      (*ximg)->info.bmiColors[1].rgbRed = 255;
-      (*ximg)->info.bmiColors[1].rgbReserved = 0;
-#     if GNUC_PREREQ (4, 4, 0)
-#      pragma GCC pop_options
-#     endif
-    }
-
-  hdc = get_frame_dc (f);
-
-  /* Create a DIBSection and raster array for the bitmap,
-     and store its handle in *pixmap.  */
-  *pixmap = CreateDIBSection (hdc, &((*ximg)->info),
-			      (depth < 16) ? DIB_PAL_COLORS : DIB_RGB_COLORS,
-			      /* casting avoids a GCC warning */
-			      (void **)&((*ximg)->data), NULL, 0);
-
-  /* Realize display palette and garbage all frames. */
-  release_frame_dc (f, hdc);
-
-  if (*pixmap == NULL)
-    {
-      DWORD err = GetLastError ();
-      Lisp_Object errcode;
-      /* All system errors are < 10000, so the following is safe.  */
-      XSETINT (errcode, err);
-      image_error ("Unable to create bitmap, error code %d", errcode);
-      x_destroy_x_image (*ximg);
-      *ximg = NULL;
-      return 0;
-    }
-
-  return 1;
-
-#endif /* HAVE_NTGUI */
-
 #ifdef HAVE_NS
   *pixmap = ns_image_for_XPM (width, height, depth);
   if (*pixmap == 0)
@@ -2112,11 +1936,6 @@ x_destroy_x_image (XImagePtr ximg)
       ximg->data = NULL;
       XDestroyImage (ximg);
 #endif /* HAVE_X_WINDOWS */
-#ifdef HAVE_NTGUI
-      /* Data will be freed by DestroyObject.  */
-      ximg->data = NULL;
-      xfree (ximg);
-#endif /* HAVE_NTGUI */
 #ifdef HAVE_NS
       ns_release_object (ximg);
 #endif /* HAVE_NS */
@@ -2138,14 +1957,6 @@ x_put_x_image (struct frame *f, XImagePtr ximg, Pixmap pixmap, int width, int he
   XPutImage (FRAME_X_DISPLAY (f), pixmap, gc, ximg, 0, 0, 0, 0, width, height);
   XFreeGC (FRAME_X_DISPLAY (f), gc);
 #endif /* HAVE_X_WINDOWS */
-
-#ifdef HAVE_NTGUI
-#if 0  /* I don't think this is necessary looking at where it is used.  */
-  HDC hdc = get_frame_dc (f);
-  SetDIBits (hdc, pixmap, 0, height, ximg->data, &(ximg->info), DIB_RGB_COLORS);
-  release_frame_dc (f, hdc);
-#endif
-#endif /* HAVE_NTGUI */
 
 #ifdef HAVE_NS
   eassert (ximg == pixmap);
@@ -2217,35 +2028,8 @@ image_sync_to_pixmaps (struct frame *f, struct image *img)
 }
 #endif
 
-#ifdef HAVE_NTGUI
-/* Create a memory device context for IMG on frame F.  It stores the
-   currently selected GDI object into *PREV for future restoration by
-   image_unget_x_image_or_dc.  */
-
-static XImagePtr_or_DC
-image_get_x_image_or_dc (struct frame *f, struct image *img, bool mask_p,
-			 HGDIOBJ *prev)
-{
-  HDC frame_dc = get_frame_dc (f);
-  XImagePtr_or_DC ximg = CreateCompatibleDC (frame_dc);
-
-  release_frame_dc (f, frame_dc);
-  *prev = SelectObject (ximg, !mask_p ? img->pixmap : img->mask);
-
-  return ximg;
-}
-
-static void
-image_unget_x_image_or_dc (struct image *img, bool mask_p,
-			   XImagePtr_or_DC ximg, HGDIOBJ prev)
-{
-  SelectObject (ximg, prev);
-  DeleteDC (ximg);
-}
-#else  /* !HAVE_NTGUI */
 /* Get the X image for IMG on frame F.  The resulting X image data
    should be treated as read-only at least on X.  */
-
 static XImagePtr
 image_get_x_image (struct frame *f, struct image *img, bool mask_p)
 {
@@ -2279,7 +2063,6 @@ image_unget_x_image (struct image *img, bool mask_p, XImagePtr ximg)
   ns_release_object (ximg);
 #endif
 }
-#endif	/* !HAVE_NTGUI */
 
 
 /***********************************************************************
@@ -2658,98 +2441,14 @@ xbm_scan (char **s, char *end, char *sval, int *ival)
   return c;
 }
 
-#ifdef HAVE_NTGUI
-
-/* Create a Windows bitmap from X bitmap data.  */
-static HBITMAP
-w32_create_pixmap_from_bitmap_data (int width, int height, char *data)
-{
-  static unsigned char swap_nibble[16]
-    = { 0x0, 0x8, 0x4, 0xc,    /* 0000 1000 0100 1100 */
-	0x2, 0xa, 0x6, 0xe,    /* 0010 1010 0110 1110 */
-	0x1, 0x9, 0x5, 0xd,    /* 0001 1001 0101 1101 */
-	0x3, 0xb, 0x7, 0xf };  /* 0011 1011 0111 1111 */
-  int i, j, w1, w2;
-  unsigned char *bits, *p;
-  HBITMAP bmp;
-
-  w1 = (width + 7) / 8;         /* nb of 8bits elt in X bitmap */
-  w2 = ((width + 15) / 16) * 2; /* nb of 16bits elt in W32 bitmap */
-  bits = alloca (height * w2);
-  memset (bits, 0, height * w2);
-  for (i = 0; i < height; i++)
-    {
-      p = bits + i*w2;
-      for (j = 0; j < w1; j++)
-	{
-	  /* Bitswap XBM bytes to match how Windows does things.  */
-	  unsigned char c = *data++;
-	  *p++ = (unsigned char)((swap_nibble[c & 0xf] << 4)
-				 | (swap_nibble[(c>>4) & 0xf]));
-	}
-    }
-  bmp = CreateBitmap (width, height, 1, 1, (char *) bits);
-
-  return bmp;
-}
-
-static void
-convert_mono_to_color_image (struct frame *f, struct image *img,
-			     COLORREF foreground, COLORREF background)
-{
-  HDC hdc, old_img_dc, new_img_dc;
-  HGDIOBJ old_prev, new_prev;
-  HBITMAP new_pixmap;
-
-  hdc = get_frame_dc (f);
-  old_img_dc = CreateCompatibleDC (hdc);
-  new_img_dc = CreateCompatibleDC (hdc);
-  new_pixmap = CreateCompatibleBitmap (hdc, img->width, img->height);
-  release_frame_dc (f, hdc);
-  old_prev = SelectObject (old_img_dc, img->pixmap);
-  new_prev = SelectObject (new_img_dc, new_pixmap);
-  /* Windows convention for mono bitmaps is black = background,
-     white = foreground.  */
-  SetTextColor (new_img_dc, background);
-  SetBkColor (new_img_dc, foreground);
-
-  BitBlt (new_img_dc, 0, 0, img->width, img->height, old_img_dc,
-	  0, 0, SRCCOPY);
-
-  SelectObject (old_img_dc, old_prev);
-  SelectObject (new_img_dc, new_prev);
-  DeleteDC (old_img_dc);
-  DeleteDC (new_img_dc);
-  DeleteObject (img->pixmap);
-  if (new_pixmap == 0)
-    fprintf (stderr, "Failed to convert image to color.\n");
-  else
-    img->pixmap = new_pixmap;
-}
-
-#define XBM_BIT_SHUFFLE(b) (~(b))
-
-#else
-
 #define XBM_BIT_SHUFFLE(b) (b)
-
-#endif /* HAVE_NTGUI */
-
 
 static void
 Create_Pixmap_From_Bitmap_Data (struct frame *f, struct image *img, char *data,
 				RGB_PIXEL_COLOR fg, RGB_PIXEL_COLOR bg,
 				bool non_default_colors)
 {
-#ifdef HAVE_NTGUI
-  img->pixmap
-    = w32_create_pixmap_from_bitmap_data (img->width, img->height, data);
-
-  /* If colors were specified, transfer the bitmap to a color one.  */
-  if (non_default_colors)
-    convert_mono_to_color_image (f, img, fg, bg);
-
-#elif defined (HAVE_NS)
+#if defined (HAVE_NS)
   img->pixmap = ns_image_from_XBM (data, img->width, img->height, fg, bg);
 
 #else
@@ -2762,7 +2461,7 @@ Create_Pixmap_From_Bitmap_Data (struct frame *f, struct image *img, char *data,
 				   fg, bg,
 				   DefaultDepthOfScreen (FRAME_X_SCREEN (f)))
     : NO_PIXMAP);
-#endif /* !HAVE_NTGUI && !HAVE_NS */
+#endif /* !HAVE_NS */
 }
 
 
@@ -3117,18 +2816,6 @@ xbm_load (struct frame *f, struct image *img)
 	  else
 	    bits = (char *) bool_vector_data (data);
 
-#ifdef HAVE_NTGUI
-          {
-            char *invertedBits;
-            int nbytes, i;
-            /* Windows mono bitmaps are reversed compared with X.  */
-            invertedBits = bits;
-            nbytes = (img->width + CHAR_BIT - 1) / CHAR_BIT * img->height;
-            SAFE_NALLOCA (bits, 1, nbytes);
-            for (i = 0; i < nbytes; i++)
-              bits[i] = XBM_BIT_SHUFFLE (invertedBits[i]);
-          }
-#endif
 	  /* Create the pixmap.  */
 
 	  if (x_check_image_size (0, img->width, img->height))
@@ -3168,26 +2855,7 @@ static bool xpm_load (struct frame *f, struct image *img);
 #endif /* HAVE_XPM || HAVE_NS */
 
 #ifdef HAVE_XPM
-#ifdef HAVE_NTGUI
-/* Indicate to xpm.h that we don't have Xlib.  */
-#define FOR_MSW
-/* simx.h in xpm defines XColor and XImage differently than Emacs.  */
-/* It also defines Display the same way as Emacs, but gcc 3.3 still barfs.  */
-#define XColor xpm_XColor
-#define XImage xpm_XImage
-#define Display xpm_Display
-#ifdef CYGWIN
-#include "noX/xpm.h"
-#else  /* not CYGWIN */
 #include "X11/xpm.h"
-#endif	/* not CYGWIN */
-#undef FOR_MSW
-#undef XColor
-#undef XImage
-#undef Display
-#else  /* not HAVE_NTGUI */
-#include "X11/xpm.h"
-#endif /* not HAVE_NTGUI */
 #endif /* HAVE_XPM */
 
 #if defined (HAVE_XPM) || defined (HAVE_NS)
@@ -3228,11 +2896,7 @@ static const struct image_keyword xpm_format[XPM_LAST] =
   {":background",	IMAGE_STRING_OR_NIL_VALUE,		0}
 };
 
-#if defined HAVE_NTGUI && defined WINDOWSNT
-static bool init_xpm_functions (void);
-#else
 #define init_xpm_functions NULL
-#endif
 
 /* Structure describing the image type XPM.  */
 
@@ -3430,46 +3094,6 @@ xpm_free_colors (Display *dpy, Colormap cmap, Pixel *pixels, int npixels, void *
 #endif /* ALLOC_XPM_COLORS */
 
 
-#ifdef WINDOWSNT
-
-/* XPM library details.  */
-
-DEF_DLL_FN (void, XpmFreeAttributes, (XpmAttributes *));
-DEF_DLL_FN (int, XpmCreateImageFromBuffer,
-	    (Display *, char *, xpm_XImage **,
-	     xpm_XImage **, XpmAttributes *));
-DEF_DLL_FN (int, XpmReadFileToImage,
-	    (Display *, char *, xpm_XImage **,
-	     xpm_XImage **, XpmAttributes *));
-DEF_DLL_FN (void, XImageFree, (xpm_XImage *));
-
-static bool
-init_xpm_functions (void)
-{
-  HMODULE library;
-
-  if (!(library = w32_delayed_load (Qxpm)))
-    return 0;
-
-  LOAD_DLL_FN (library, XpmFreeAttributes);
-  LOAD_DLL_FN (library, XpmCreateImageFromBuffer);
-  LOAD_DLL_FN (library, XpmReadFileToImage);
-  LOAD_DLL_FN (library, XImageFree);
-  return 1;
-}
-
-# undef XImageFree
-# undef XpmCreateImageFromBuffer
-# undef XpmFreeAttributes
-# undef XpmReadFileToImage
-
-# define XImageFree fn_XImageFree
-# define XpmCreateImageFromBuffer fn_XpmCreateImageFromBuffer
-# define XpmFreeAttributes fn_XpmFreeAttributes
-# define XpmReadFileToImage fn_XpmReadFileToImage
-
-#endif /* WINDOWSNT */
-
 /* Value is true if COLOR_SYMBOLS is a valid color symbols list
    for XPM images.  Such a list must consist of conses whose car and
    cdr are strings.  */
@@ -3523,21 +3147,14 @@ xpm_load (struct frame *f, struct image *img)
   Lisp_Object specified_file, color_symbols;
   USE_SAFE_ALLOCA;
 
-#ifdef HAVE_NTGUI
-  HDC hdc;
-  xpm_XImage * xpm_image = NULL, * xpm_mask = NULL;
-#endif /* HAVE_NTGUI */
-
   /* Configure the XPM lib.  Use the visual of frame F.  Allocate
      close colors.  Return colors allocated.  */
   memset (&attrs, 0, sizeof attrs);
 
-#ifndef HAVE_NTGUI
   attrs.visual = FRAME_X_VISUAL (f);
   attrs.colormap = FRAME_X_COLORMAP (f);
   attrs.valuemask |= XpmVisual;
   attrs.valuemask |= XpmColormap;
-#endif /* HAVE_NTGUI */
 
 #ifdef ALLOC_XPM_COLORS
   /* Allocate colors with our own functions which handle
@@ -3616,14 +3233,6 @@ xpm_load (struct frame *f, struct image *img)
 
   specified_file = image_spec_value (img->spec, QCfile, NULL);
 
-#ifdef HAVE_NTGUI
-  {
-    HDC frame_dc = get_frame_dc (f);
-    hdc = CreateCompatibleDC (frame_dc);
-    release_frame_dc (f, frame_dc);
-  }
-#endif /* HAVE_NTGUI */
-
   if (STRINGP (specified_file))
     {
       Lisp_Object file = x_find_image_file (specified_file);
@@ -3638,23 +3247,9 @@ xpm_load (struct frame *f, struct image *img)
 	}
 
       file = ENCODE_FILE (file);
-#ifdef HAVE_NTGUI
-#ifdef WINDOWSNT
-      /* FILE is encoded in UTF-8, but image libraries on Windows
-	 support neither UTF-8 nor UTF-16 encoded file names.  So we
-	 need to re-encode it in ANSI.  */
-      file = ansi_encode_filename (file);
-#endif
-      /* XpmReadFileToPixmap is not available in the Windows port of
-	 libxpm.  But XpmReadFileToImage almost does what we want.  */
-      rc = XpmReadFileToImage (&hdc, SSDATA (file),
-			       &xpm_image, &xpm_mask,
-			       &attrs);
-#else
       rc = XpmReadFileToImage (FRAME_X_DISPLAY (f), SSDATA (file),
 			       &img->ximg, &img->mask_img,
 			       &attrs);
-#endif /* HAVE_NTGUI */
     }
   else
     {
@@ -3668,17 +3263,9 @@ xpm_load (struct frame *f, struct image *img)
 	  SAFE_FREE ();
 	  return 0;
 	}
-#ifdef HAVE_NTGUI
-      /* XpmCreatePixmapFromBuffer is not available in the Windows port
-	 of libxpm.  But XpmCreateImageFromBuffer almost does what we want.  */
-      rc = XpmCreateImageFromBuffer (&hdc, SSDATA (buffer),
-				     &xpm_image, &xpm_mask,
-				     &attrs);
-#else
       rc = XpmCreateImageFromBuffer (FRAME_X_DISPLAY (f), SSDATA (buffer),
 				     &img->ximg, &img->mask_img,
 				     &attrs);
-#endif /* HAVE_NTGUI */
     }
 
 #ifdef USE_CAIRO
@@ -3753,35 +3340,6 @@ xpm_load (struct frame *f, struct image *img)
 #else /* not ALLOC_XPM_COLORS */
       int i;
 
-#ifdef HAVE_NTGUI
-      /* W32 XPM uses XImage to wrap what W32 Emacs calls a Pixmap,
-	 plus some duplicate attributes.  */
-      if (xpm_image && xpm_image->bitmap)
-	{
-	  img->pixmap = xpm_image->bitmap;
-	  /* XImageFree in libXpm frees XImage struct without destroying
-	     the bitmap, which is what we want.  */
-	  XImageFree (xpm_image);
-	}
-      if (xpm_mask && xpm_mask->bitmap)
-	{
-	  /* The mask appears to be inverted compared with what we expect.
-	     TODO: invert our expectations.  See other places where we
-	     have to invert bits because our idea of masks is backwards.  */
-	  HGDIOBJ old_obj;
-	  old_obj = SelectObject (hdc, xpm_mask->bitmap);
-
-	  PatBlt (hdc, 0, 0, xpm_mask->width, xpm_mask->height, DSTINVERT);
-	  SelectObject (hdc, old_obj);
-
-	  img->mask = xpm_mask->bitmap;
-	  XImageFree (xpm_mask);
-	  DeleteDC (hdc);
-	}
-
-      DeleteDC (hdc);
-#endif /* HAVE_NTGUI */
-
       /* Remember allocated colors.  */
       img->colors = xnmalloc (attrs.nalloc_pixels, sizeof *img->colors);
       img->ncolors = attrs.nalloc_pixels;
@@ -3812,10 +3370,6 @@ xpm_load (struct frame *f, struct image *img)
     }
   else
     {
-#ifdef HAVE_NTGUI
-      DeleteDC (hdc);
-#endif /* HAVE_NTGUI */
-
       switch (rc)
 	{
 	case XpmOpenFailed:
@@ -4466,11 +4020,7 @@ lookup_rgb_color (struct frame *f, int r, int g, int b)
 	return FRAME_FOREGROUND_PIXEL (f);
 
 #else
-#ifdef HAVE_NTGUI
-      color = PALETTERGB (r, g, b);
-#else
       color = RGB_TO_ULONG (r, g, b);
-#endif /* HAVE_NTGUI */
       ++ct_colors_allocated;
       p = xmalloc (sizeof *p);
       p->r = r;
@@ -4575,9 +4125,7 @@ colors_in_color_table (int *n)
 static unsigned long
 lookup_rgb_color (struct frame *f, int r, int g, int b)
 {
-#ifdef HAVE_NTGUI
-  return PALETTERGB (r >> 8, g >> 8, b >> 8);
-#elif defined HAVE_NS
+#if defined HAVE_NS
   return RGB_TO_ULONG (r >> 8, g >> 8, b >> 8);
 #else
   xsignal1 (Qfile_error,
@@ -4632,9 +4180,6 @@ x_to_xcolors (struct frame *f, struct image *img, bool rgb_p)
   XColor *colors, *p;
   XImagePtr_or_DC ximg;
   ptrdiff_t nbytes;
-#ifdef HAVE_NTGUI
-  HGDIOBJ prev;
-#endif /* HAVE_NTGUI */
 
   if (INT_MULTIPLY_WRAPV (sizeof *colors, img->width, &nbytes)
       || INT_MULTIPLY_WRAPV (img->height, nbytes, &nbytes)
@@ -4650,7 +4195,7 @@ x_to_xcolors (struct frame *f, struct image *img, bool rgb_p)
   p = colors;
   for (y = 0; y < img->height; ++y)
     {
-#if defined (HAVE_X_WINDOWS) || defined (HAVE_NTGUI)
+#if defined (HAVE_X_WINDOWS)
       XColor *row = p;
       for (x = 0; x < img->width; ++x, ++p)
 	p->pixel = GET_PIXEL (ximg, x, y);
@@ -4677,52 +4222,6 @@ x_to_xcolors (struct frame *f, struct image *img, bool rgb_p)
 
   return colors;
 }
-
-#ifdef HAVE_NTGUI
-
-/* Put a pixel of COLOR at position X, Y in XIMG.  XIMG must have been
-   created with CreateDIBSection, with the pointer to the bit values
-   stored in ximg->data.  */
-
-static void
-XPutPixel (XImagePtr ximg, int x, int y, COLORREF color)
-{
-  int width = ximg->info.bmiHeader.biWidth;
-  unsigned char * pixel;
-
-  /* True color images.  */
-  if (ximg->info.bmiHeader.biBitCount == 24)
-    {
-      int rowbytes = width * 3;
-      /* Ensure scanlines are aligned on 4 byte boundaries.  */
-      if (rowbytes % 4)
-	rowbytes += 4 - (rowbytes % 4);
-
-      pixel = ximg->data + y * rowbytes + x * 3;
-      /* Windows bitmaps are in BGR order.  */
-      *pixel = GetBValue (color);
-      *(pixel + 1) = GetGValue (color);
-      *(pixel + 2) = GetRValue (color);
-    }
-  /* Monochrome images.  */
-  else if (ximg->info.bmiHeader.biBitCount == 1)
-    {
-      int rowbytes = width / 8;
-      /* Ensure scanlines are aligned on 4 byte boundaries.  */
-      if (rowbytes % 4)
-	rowbytes += 4 - (rowbytes % 4);
-      pixel = ximg->data + y * rowbytes + x / 8;
-      /* Filter out palette info.  */
-      if (color & 0x00ffffff)
-	*pixel = *pixel | (1 << x % 8);
-      else
-	*pixel = *pixel & ~(1 << x % 8);
-    }
-  else
-    image_error ("XPutPixel: palette image not supported");
-}
-
-#endif /* HAVE_NTGUI */
 
 /* Create IMG->pixmap from an array COLORS of XColor structures, whose
    RGB members are set.  F is the frame on which this all happens.
@@ -4900,11 +4399,7 @@ static void
 x_disable_image (struct frame *f, struct image *img)
 {
   Display_Info *dpyinfo = FRAME_DISPLAY_INFO (f);
-#ifdef HAVE_NTGUI
-  int n_planes = dpyinfo->n_planes * dpyinfo->n_cbits;
-#else
   int n_planes = dpyinfo->n_planes;
-#endif /* HAVE_NTGUI */
 
   if (n_planes >= 2)
     {
@@ -4932,7 +4427,6 @@ x_disable_image (struct frame *f, struct image *img)
      should.  */
   if (n_planes < 2 || cross_disabled_images)
     {
-#ifndef HAVE_NTGUI
 #ifndef HAVE_NS  /* TODO: NS support, however this not needed for toolbars */
 
 #define MaskForeground(f)  WHITE_PIX_DEFAULT (f)
@@ -4960,7 +4454,6 @@ x_disable_image (struct frame *f, struct image *img)
 	  XFreeGC (dpy, gc);
 	}
 #endif /* !HAVE_NS */
-#else
       HDC hdc, bmpdc;
       HGDIOBJ prev;
 
@@ -4987,7 +4480,6 @@ x_disable_image (struct frame *f, struct image *img)
 	}
       SelectObject (bmpdc, prev);
       DeleteDC (bmpdc);
-#endif /* HAVE_NTGUI */
     }
 }
 
@@ -5003,11 +4495,7 @@ static void
 x_build_heuristic_mask (struct frame *f, struct image *img, Lisp_Object how)
 {
   XImagePtr_or_DC ximg;
-#ifdef HAVE_NTGUI
-  HGDIOBJ prev;
-  char *mask_img;
-  int row_width;
-#elif !defined HAVE_NS
+#if !defined HAVE_NS
   XImagePtr mask_img;
 #endif
   int x, y;
@@ -5017,18 +4505,12 @@ x_build_heuristic_mask (struct frame *f, struct image *img, Lisp_Object how)
   if (img->mask)
     x_clear_image_1 (f, img, CLEAR_IMAGE_MASK);
 
-#ifndef HAVE_NTGUI
 #ifndef HAVE_NS
   /* Create an image and pixmap serving as mask.  */
   if (! image_create_x_image_and_pixmap (f, img, img->width, img->height, 1,
 					 &mask_img, 1))
     return;
 #endif /* !HAVE_NS */
-#else
-  /* Create the bit array serving as mask.  */
-  row_width = (img->width + 7) / 8;
-  mask_img = xzalloc (row_width * img->height);
-#endif /* HAVE_NTGUI */
 
   /* Get the X image or create a memory device context for IMG.  */
   ximg = image_get_x_image_or_dc (f, img, 0, &prev);
@@ -5053,9 +4535,6 @@ x_build_heuristic_mask (struct frame *f, struct image *img, Lisp_Object how)
 	  sprintf (color_name, "#%04x%04x%04x",
 		   rgb[0] + 0u, rgb[1] + 0u, rgb[2] + 0u);
 	  bg = (
-#ifdef HAVE_NTGUI
-		0x00ffffff & /* Filter out palette info.  */
-#endif /* HAVE_NTGUI */
 		x_alloc_image_color (f, img, build_string (color_name), 0));
 	  use_img_background = 0;
 	}
@@ -5066,7 +4545,6 @@ x_build_heuristic_mask (struct frame *f, struct image *img, Lisp_Object how)
 
   /* Set all bits in mask_img to 1 whose color in ximg is different
      from the background color bg.  */
-#ifndef HAVE_NTGUI
   for (y = 0; y < img->height; ++y)
     for (x = 0; x < img->width; ++x)
 #ifndef HAVE_NS
@@ -5083,25 +4561,6 @@ x_build_heuristic_mask (struct frame *f, struct image *img, Lisp_Object how)
   /* Put mask_img into the image.  */
   image_put_x_image (f, img, mask_img, 1);
 #endif /* !HAVE_NS */
-#else
-  for (y = 0; y < img->height; ++y)
-    for (x = 0; x < img->width; ++x)
-      {
-	COLORREF p = GetPixel (ximg, x, y);
-	if (p != bg)
-	  mask_img[y * row_width + x / 8] |= 1 << (x % 8);
-      }
-
-  /* Create the mask image.  */
-  img->mask = w32_create_pixmap_from_bitmap_data (img->width, img->height,
-						  mask_img);
-  /* Fill in the background_transparent field while we have the mask handy. */
-  SelectObject (ximg, img->mask);
-  image_background_transparent (img, f, ximg);
-
-  /* Was: x_destroy_x_image ((XImagePtr )mask_img); which seems bogus ++kfs */
-  xfree (mask_img);
-#endif /* HAVE_NTGUI */
 
   image_unget_x_image_or_dc (img, 0, ximg, prev);
 }
@@ -5612,11 +5071,7 @@ static const struct image_keyword png_format[PNG_LAST] =
   {":background",	IMAGE_STRING_OR_NIL_VALUE,		0}
 };
 
-#if defined HAVE_NTGUI && defined WINDOWSNT
-static bool init_png_functions (void);
-#else
 #define init_png_functions NULL
-#endif
 
 /* Structure describing the image type `png'.  */
 
@@ -5649,131 +5104,6 @@ png_image_p (Lisp_Object object)
 
 
 #if (defined HAVE_PNG && !defined HAVE_NS) || defined USE_CAIRO
-
-# ifdef WINDOWSNT
-/* PNG library details.  */
-
-DEF_DLL_FN (png_voidp, png_get_io_ptr, (png_structp));
-DEF_DLL_FN (int, png_sig_cmp, (png_bytep, png_size_t, png_size_t));
-DEF_DLL_FN (png_structp, png_create_read_struct,
-	    (png_const_charp, png_voidp, png_error_ptr, png_error_ptr));
-DEF_DLL_FN (png_infop, png_create_info_struct, (png_structp));
-DEF_DLL_FN (void, png_destroy_read_struct,
-	    (png_structpp, png_infopp, png_infopp));
-DEF_DLL_FN (void, png_set_read_fn, (png_structp, png_voidp, png_rw_ptr));
-DEF_DLL_FN (void, png_set_sig_bytes, (png_structp, int));
-DEF_DLL_FN (void, png_read_info, (png_structp, png_infop));
-DEF_DLL_FN (png_uint_32, png_get_IHDR,
-	    (png_structp, png_infop, png_uint_32 *, png_uint_32 *,
-	     int *, int *, int *, int *, int *));
-DEF_DLL_FN (png_uint_32, png_get_valid, (png_structp, png_infop, png_uint_32));
-DEF_DLL_FN (void, png_set_strip_16, (png_structp));
-DEF_DLL_FN (void, png_set_expand, (png_structp));
-DEF_DLL_FN (void, png_set_gray_to_rgb, (png_structp));
-DEF_DLL_FN (void, png_set_background,
-	    (png_structp, png_color_16p, int, int, double));
-DEF_DLL_FN (png_uint_32, png_get_bKGD,
-	    (png_structp, png_infop, png_color_16p *));
-DEF_DLL_FN (void, png_read_update_info, (png_structp, png_infop));
-DEF_DLL_FN (png_byte, png_get_channels, (png_structp, png_infop));
-DEF_DLL_FN (png_size_t, png_get_rowbytes, (png_structp, png_infop));
-DEF_DLL_FN (void, png_read_image, (png_structp, png_bytepp));
-DEF_DLL_FN (void, png_read_end, (png_structp, png_infop));
-DEF_DLL_FN (void, png_error, (png_structp, png_const_charp));
-
-#  if (PNG_LIBPNG_VER >= 10500)
-DEF_DLL_FN (void, png_longjmp, (png_structp, int)) PNG_NORETURN;
-DEF_DLL_FN (jmp_buf *, png_set_longjmp_fn,
-	    (png_structp, png_longjmp_ptr, size_t));
-#  endif /* libpng version >= 1.5 */
-
-static bool
-init_png_functions (void)
-{
-  HMODULE library;
-
-  if (!(library = w32_delayed_load (Qpng)))
-    return 0;
-
-  LOAD_DLL_FN (library, png_get_io_ptr);
-  LOAD_DLL_FN (library, png_sig_cmp);
-  LOAD_DLL_FN (library, png_create_read_struct);
-  LOAD_DLL_FN (library, png_create_info_struct);
-  LOAD_DLL_FN (library, png_destroy_read_struct);
-  LOAD_DLL_FN (library, png_set_read_fn);
-  LOAD_DLL_FN (library, png_set_sig_bytes);
-  LOAD_DLL_FN (library, png_read_info);
-  LOAD_DLL_FN (library, png_get_IHDR);
-  LOAD_DLL_FN (library, png_get_valid);
-  LOAD_DLL_FN (library, png_set_strip_16);
-  LOAD_DLL_FN (library, png_set_expand);
-  LOAD_DLL_FN (library, png_set_gray_to_rgb);
-  LOAD_DLL_FN (library, png_set_background);
-  LOAD_DLL_FN (library, png_get_bKGD);
-  LOAD_DLL_FN (library, png_read_update_info);
-  LOAD_DLL_FN (library, png_get_channels);
-  LOAD_DLL_FN (library, png_get_rowbytes);
-  LOAD_DLL_FN (library, png_read_image);
-  LOAD_DLL_FN (library, png_read_end);
-  LOAD_DLL_FN (library, png_error);
-
-#  if (PNG_LIBPNG_VER >= 10500)
-  LOAD_DLL_FN (library, png_longjmp);
-  LOAD_DLL_FN (library, png_set_longjmp_fn);
-#  endif /* libpng version >= 1.5 */
-
-  return 1;
-}
-
-#  undef png_create_info_struct
-#  undef png_create_read_struct
-#  undef png_destroy_read_struct
-#  undef png_error
-#  undef png_get_bKGD
-#  undef png_get_channels
-#  undef png_get_IHDR
-#  undef png_get_io_ptr
-#  undef png_get_rowbytes
-#  undef png_get_valid
-#  undef png_longjmp
-#  undef png_read_end
-#  undef png_read_image
-#  undef png_read_info
-#  undef png_read_update_info
-#  undef png_set_background
-#  undef png_set_expand
-#  undef png_set_gray_to_rgb
-#  undef png_set_longjmp_fn
-#  undef png_set_read_fn
-#  undef png_set_sig_bytes
-#  undef png_set_strip_16
-#  undef png_sig_cmp
-
-#  define png_create_info_struct fn_png_create_info_struct
-#  define png_create_read_struct fn_png_create_read_struct
-#  define png_destroy_read_struct fn_png_destroy_read_struct
-#  define png_error fn_png_error
-#  define png_get_bKGD fn_png_get_bKGD
-#  define png_get_channels fn_png_get_channels
-#  define png_get_IHDR fn_png_get_IHDR
-#  define png_get_io_ptr fn_png_get_io_ptr
-#  define png_get_rowbytes fn_png_get_rowbytes
-#  define png_get_valid fn_png_get_valid
-#  define png_longjmp fn_png_longjmp
-#  define png_read_end fn_png_read_end
-#  define png_read_image fn_png_read_image
-#  define png_read_info fn_png_read_info
-#  define png_read_update_info fn_png_read_update_info
-#  define png_set_background fn_png_set_background
-#  define png_set_expand fn_png_set_expand
-#  define png_set_gray_to_rgb fn_png_set_gray_to_rgb
-#  define png_set_longjmp_fn fn_png_set_longjmp_fn
-#  define png_set_read_fn fn_png_set_read_fn
-#  define png_set_sig_bytes fn_png_set_sig_bytes
-#  define png_set_strip_16 fn_png_set_strip_16
-#  define png_sig_cmp fn_png_sig_cmp
-
-# endif /* WINDOWSNT */
 
 /* Fast implementations of setjmp and longjmp.  Although setjmp and longjmp
    will do, POSIX _setjmp and _longjmp (if available) are often faster.
@@ -6289,11 +5619,7 @@ static const struct image_keyword jpeg_format[JPEG_LAST] =
   {":background",	IMAGE_STRING_OR_NIL_VALUE,		0}
 };
 
-#if defined HAVE_NTGUI && defined WINDOWSNT
-static bool init_jpeg_functions (void);
-#else
 #define init_jpeg_functions NULL
-#endif
 
 /* Structure describing the image type `jpeg'.  */
 
@@ -6333,12 +5659,6 @@ jpeg_image_p (Lisp_Object object)
 #  undef HAVE_STDLIB_H
 # endif
 
-# if defined (HAVE_NTGUI) && !defined (__WIN32__)
-/* In older releases of the jpeg library, jpeglib.h will define boolean
-   differently depending on __WIN32__, so make sure it is defined.  */
-#  define __WIN32__ 1
-# endif
-
 /* rpcndr.h (via windows.h) and jpeglib.h both define boolean types.
    Some versions of jpeglib try to detect whether rpcndr.h is loaded,
    using the Windows boolean type instead of the jpeglib boolean type
@@ -6353,74 +5673,8 @@ jpeg_image_p (Lisp_Object object)
    different name.  This name, jpeg_boolean, remains in effect through
    the rest of image.c.
 */
-# if defined CYGWIN && defined HAVE_NTGUI
-#  define boolean jpeg_boolean
-# endif
 # include <jpeglib.h>
 # include <jerror.h>
-
-# ifdef WINDOWSNT
-
-/* JPEG library details.  */
-DEF_DLL_FN (void, jpeg_CreateDecompress, (j_decompress_ptr, int, size_t));
-DEF_DLL_FN (boolean, jpeg_start_decompress, (j_decompress_ptr));
-DEF_DLL_FN (boolean, jpeg_finish_decompress, (j_decompress_ptr));
-DEF_DLL_FN (void, jpeg_destroy_decompress, (j_decompress_ptr));
-DEF_DLL_FN (int, jpeg_read_header, (j_decompress_ptr, boolean));
-DEF_DLL_FN (JDIMENSION, jpeg_read_scanlines,
-	    (j_decompress_ptr, JSAMPARRAY, JDIMENSION));
-DEF_DLL_FN (struct jpeg_error_mgr *, jpeg_std_error,
-	    (struct jpeg_error_mgr *));
-DEF_DLL_FN (boolean, jpeg_resync_to_restart, (j_decompress_ptr, int));
-
-static bool
-init_jpeg_functions (void)
-{
-  HMODULE library;
-
-  if (!(library = w32_delayed_load (Qjpeg)))
-    return 0;
-
-  LOAD_DLL_FN (library, jpeg_finish_decompress);
-  LOAD_DLL_FN (library, jpeg_read_scanlines);
-  LOAD_DLL_FN (library, jpeg_start_decompress);
-  LOAD_DLL_FN (library, jpeg_read_header);
-  LOAD_DLL_FN (library, jpeg_CreateDecompress);
-  LOAD_DLL_FN (library, jpeg_destroy_decompress);
-  LOAD_DLL_FN (library, jpeg_std_error);
-  LOAD_DLL_FN (library, jpeg_resync_to_restart);
-  return 1;
-}
-
-#  undef jpeg_CreateDecompress
-#  undef jpeg_destroy_decompress
-#  undef jpeg_finish_decompress
-#  undef jpeg_read_header
-#  undef jpeg_read_scanlines
-#  undef jpeg_resync_to_restart
-#  undef jpeg_start_decompress
-#  undef jpeg_std_error
-
-#  define jpeg_CreateDecompress fn_jpeg_CreateDecompress
-#  define jpeg_destroy_decompress fn_jpeg_destroy_decompress
-#  define jpeg_finish_decompress fn_jpeg_finish_decompress
-#  define jpeg_read_header fn_jpeg_read_header
-#  define jpeg_read_scanlines fn_jpeg_read_scanlines
-#  define jpeg_resync_to_restart fn_jpeg_resync_to_restart
-#  define jpeg_start_decompress fn_jpeg_start_decompress
-#  define jpeg_std_error fn_jpeg_std_error
-
-/* Wrapper since we can't directly assign the function pointer
-   to another function pointer that was declared more completely easily.  */
-static boolean
-jpeg_resync_to_restart_wrapper (j_decompress_ptr cinfo, int desired)
-{
-  return jpeg_resync_to_restart (cinfo, desired);
-}
-#  undef jpeg_resync_to_restart
-#  define jpeg_resync_to_restart jpeg_resync_to_restart_wrapper
-
-# endif /* WINDOWSNT */
 
 struct my_jpeg_error_mgr
 {
@@ -6921,11 +6175,7 @@ static const struct image_keyword tiff_format[TIFF_LAST] =
   {":index",		IMAGE_NON_NEGATIVE_INTEGER_VALUE,	0}
 };
 
-#if defined HAVE_NTGUI && defined WINDOWSNT
-static bool init_tiff_functions (void);
-#else
 #define init_tiff_functions NULL
-#endif
 
 /* Structure describing the image type `tiff'.  */
 
@@ -6959,61 +6209,6 @@ tiff_image_p (Lisp_Object object)
 #ifdef HAVE_TIFF
 
 # include <tiffio.h>
-
-# ifdef WINDOWSNT
-
-/* TIFF library details.  */
-DEF_DLL_FN (TIFFErrorHandler, TIFFSetErrorHandler, (TIFFErrorHandler));
-DEF_DLL_FN (TIFFErrorHandler, TIFFSetWarningHandler, (TIFFErrorHandler));
-DEF_DLL_FN (TIFF *, TIFFOpen, (const char *, const char *));
-DEF_DLL_FN (TIFF *, TIFFClientOpen,
-	    (const char *, const char *, thandle_t, TIFFReadWriteProc,
-	     TIFFReadWriteProc, TIFFSeekProc, TIFFCloseProc, TIFFSizeProc,
-	     TIFFMapFileProc, TIFFUnmapFileProc));
-DEF_DLL_FN (int, TIFFGetField, (TIFF *, ttag_t, ...));
-DEF_DLL_FN (int, TIFFReadRGBAImage, (TIFF *, uint32, uint32, uint32 *, int));
-DEF_DLL_FN (void, TIFFClose, (TIFF *));
-DEF_DLL_FN (int, TIFFSetDirectory, (TIFF *, tdir_t));
-
-static bool
-init_tiff_functions (void)
-{
-  HMODULE library;
-
-  if (!(library = w32_delayed_load (Qtiff)))
-    return 0;
-
-  LOAD_DLL_FN (library, TIFFSetErrorHandler);
-  LOAD_DLL_FN (library, TIFFSetWarningHandler);
-  LOAD_DLL_FN (library, TIFFOpen);
-  LOAD_DLL_FN (library, TIFFClientOpen);
-  LOAD_DLL_FN (library, TIFFGetField);
-  LOAD_DLL_FN (library, TIFFReadRGBAImage);
-  LOAD_DLL_FN (library, TIFFClose);
-  LOAD_DLL_FN (library, TIFFSetDirectory);
-  return 1;
-}
-
-#  undef TIFFClientOpen
-#  undef TIFFClose
-#  undef TIFFGetField
-#  undef TIFFOpen
-#  undef TIFFReadRGBAImage
-#  undef TIFFSetDirectory
-#  undef TIFFSetErrorHandler
-#  undef TIFFSetWarningHandler
-
-#  define TIFFClientOpen fn_TIFFClientOpen
-#  define TIFFClose fn_TIFFClose
-#  define TIFFGetField fn_TIFFGetField
-#  define TIFFOpen fn_TIFFOpen
-#  define TIFFReadRGBAImage fn_TIFFReadRGBAImage
-#  define TIFFSetDirectory fn_TIFFSetDirectory
-#  define TIFFSetErrorHandler fn_TIFFSetErrorHandler
-#  define TIFFSetWarningHandler fn_TIFFSetWarningHandler
-
-# endif /* WINDOWSNT */
-
 
 /* Reading from a memory buffer for TIFF images Based on the PNG
    memory source, but we have to provide a lot of extra functions.
@@ -7186,9 +6381,6 @@ tiff_load (struct frame *f, struct image *img)
 	}
 
       Lisp_Object encoded_file = ENCODE_FILE (file);
-# ifdef WINDOWSNT
-      encoded_file = ansi_encode_filename (encoded_file);
-# endif
 
       /* Try to open the image file.  */
       tiff = TIFFOpen (SSDATA (encoded_file), "r");
@@ -7406,11 +6598,7 @@ static const struct image_keyword gif_format[GIF_LAST] =
   {":background",	IMAGE_STRING_OR_NIL_VALUE,		0}
 };
 
-#if defined HAVE_NTGUI && defined WINDOWSNT
-static bool init_gif_functions (void);
-#else
 #define init_gif_functions NULL
-#endif
 
 /* Structure describing the image type `gif'.  */
 
@@ -7451,36 +6639,7 @@ gif_image_p (Lisp_Object object)
 #endif /* HAVE_GIF */
 
 #ifdef HAVE_GIF
-
-# ifdef HAVE_NTGUI
-
-/* winuser.h might define DrawText to DrawTextA or DrawTextW.
-   Undefine before redefining to avoid a preprocessor warning.  */
-#  ifdef DrawText
-#   undef DrawText
-#  endif
-/* avoid conflict with QuickdrawText.h */
-#  define DrawText gif_DrawText
-#  include <gif_lib.h>
-/* The bogus ifdef below, which is always true, is to avoid a compiler
-   warning about DrawText being unused.  */
-#  ifdef DrawText
-#   undef DrawText
-#  endif
-
-/* Giflib before 5.0 didn't define these macros (used only if HAVE_NTGUI).  */
-#  ifndef GIFLIB_MINOR
-#   define GIFLIB_MINOR 0
-#  endif
-#  ifndef GIFLIB_RELEASE
-#   define GIFLIB_RELEASE 0
-#  endif
-
-# else /* HAVE_NTGUI */
-
-#  include <gif_lib.h>
-
-# endif /* HAVE_NTGUI */
+#include <gif_lib.h>
 
 /* Giflib before 5.0 didn't define these macros.  */
 # ifndef GIFLIB_MAJOR
@@ -7492,58 +6651,6 @@ gif_image_p (Lisp_Object object)
    earlier releases, where either it returns char * or GIFLIB_MINOR
    may be incorrect.  */
 # define HAVE_GIFERRORSTRING (5 < GIFLIB_MAJOR + (1 <= GIFLIB_MINOR))
-
-# ifdef WINDOWSNT
-
-/* GIF library details.  */
-#  if GIFLIB_MAJOR + (GIFLIB_MINOR >= 1) > 5
-DEF_DLL_FN (int, DGifCloseFile, (GifFileType *, int *));
-#   else
-DEF_DLL_FN (int, DGifCloseFile, (GifFileType *));
-#  endif
-DEF_DLL_FN (int, DGifSlurp, (GifFileType *));
-#  if GIFLIB_MAJOR < 5
-DEF_DLL_FN (GifFileType *, DGifOpen, (void *, InputFunc));
-DEF_DLL_FN (GifFileType *, DGifOpenFileName, (const char *));
-#  else
-DEF_DLL_FN (GifFileType *, DGifOpen, (void *, InputFunc, int *));
-DEF_DLL_FN (GifFileType *, DGifOpenFileName, (const char *, int *));
-#  endif
-#  if HAVE_GIFERRORSTRING
-DEF_DLL_FN (char const *, GifErrorString, (int));
-#  endif
-
-static bool
-init_gif_functions (void)
-{
-  HMODULE library;
-
-  if (!(library = w32_delayed_load (Qgif)))
-    return 0;
-
-  LOAD_DLL_FN (library, DGifCloseFile);
-  LOAD_DLL_FN (library, DGifSlurp);
-  LOAD_DLL_FN (library, DGifOpen);
-  LOAD_DLL_FN (library, DGifOpenFileName);
-#  if HAVE_GIFERRORSTRING
-  LOAD_DLL_FN (library, GifErrorString);
-#  endif
-  return 1;
-}
-
-#  undef DGifCloseFile
-#  undef DGifOpen
-#  undef DGifOpenFileName
-#  undef DGifSlurp
-#  undef GifErrorString
-
-#  define DGifCloseFile fn_DGifCloseFile
-#  define DGifOpen fn_DGifOpen
-#  define DGifOpenFileName fn_DGifOpenFileName
-#  define DGifSlurp fn_DGifSlurp
-#  define GifErrorString fn_GifErrorString
-
-# endif /* WINDOWSNT */
 
 /* Reading a GIF image from memory
    Based on the PNG memory stuff to a certain extent. */
@@ -7622,9 +6729,6 @@ gif_load (struct frame *f, struct image *img)
 	}
 
       Lisp_Object encoded_file = ENCODE_FILE (file);
-#ifdef WINDOWSNT
-      encoded_file = ansi_encode_filename (encoded_file);
-#endif
 
       /* Open the GIF file.  */
 #if GIFLIB_MAJOR < 5
@@ -8172,11 +7276,7 @@ static struct image_keyword imagemagick_format[IMAGEMAGICK_LAST] =
     {":crop",		IMAGE_DONT_CHECK_VALUE_TYPE,		0}
   };
 
-#if defined HAVE_NTGUI && defined WINDOWSNT
-static bool init_imagemagick_functions (void);
-#else
 #define init_imagemagick_functions NULL
-#endif
 
 /* Structure describing the image type for any image handled via
    ImageMagick.  */
@@ -8853,9 +7953,6 @@ imagemagick_load (struct frame *f, struct image *img)
 	  return 0;
 	}
       file = ENCODE_FILE (file);
-#ifdef WINDOWSNT
-      file = ansi_encode_filename (file);
-#endif
       success_p = imagemagick_load_image (f, img, 0, 0, SSDATA (file));
     }
   /* Else its not a file, its a lisp object.  Load the image from a
@@ -8962,11 +8059,7 @@ static const struct image_keyword svg_format[SVG_LAST] =
   {":background",	IMAGE_STRING_OR_NIL_VALUE,		0}
 };
 
-# if defined HAVE_NTGUI && defined WINDOWSNT
-static bool init_svg_functions (void);
-# else
 #define init_svg_functions NULL
-# endif
 
 /* Structure describing the image type `svg'.  Its the same type of
    structure defined for all image formats, handled by emacs image
@@ -9000,138 +8093,7 @@ svg_image_p (Lisp_Object object)
   return fmt[SVG_FILE].count + fmt[SVG_DATA].count == 1;
 }
 
-/* Some versions of glib's gatomic.h define MemoryBarrier, but MinGW
-   w32api 3.18 and later has its own definition.  The following gross
-   hack avoids the clash.  */
-# ifdef WINDOWSNT
-#  if (__W32API_MAJOR_VERSION + (__W32API_MINOR_VERSION >= 18)) >= 4
-#   define W32_SAVE_MINGW_VERSION __MINGW_MAJOR_VERSION
-#   undef __MINGW_MAJOR_VERSION
-#   define __MINGW_MAJOR_VERSION 4
-#  endif
-# endif
-
 # include <librsvg/rsvg.h>
-
-# ifdef WINDOWSNT
-
-/* Restore the original definition of __MINGW_MAJOR_VERSION.  */
-# ifdef W32_SAVE_MINGW_VERSION
-#  undef __MINGW_MAJOR_VERSION
-#  define __MINGW_MAJOR_VERSION W32_SAVE_MINGW_VERSION
-#  ifdef __MINGW_MAJOR_VERSION
-#   undef W32_SAVE_MINGW_VERSION
-#  endif
-# endif
-
-/* SVG library functions.  */
-DEF_DLL_FN (RsvgHandle *, rsvg_handle_new, (void));
-DEF_DLL_FN (void, rsvg_handle_get_dimensions,
-	    (RsvgHandle *, RsvgDimensionData *));
-DEF_DLL_FN (gboolean, rsvg_handle_write,
-	    (RsvgHandle *, const guchar *, gsize, GError **));
-DEF_DLL_FN (gboolean, rsvg_handle_close, (RsvgHandle *, GError **));
-DEF_DLL_FN (GdkPixbuf *, rsvg_handle_get_pixbuf, (RsvgHandle *));
-DEF_DLL_FN (void, rsvg_handle_set_base_uri, (RsvgHandle *, const char *));
-
-DEF_DLL_FN (int, gdk_pixbuf_get_width, (const GdkPixbuf *));
-DEF_DLL_FN (int, gdk_pixbuf_get_height, (const GdkPixbuf *));
-DEF_DLL_FN (guchar *, gdk_pixbuf_get_pixels, (const GdkPixbuf *));
-DEF_DLL_FN (int, gdk_pixbuf_get_rowstride, (const GdkPixbuf *));
-DEF_DLL_FN (GdkColorspace, gdk_pixbuf_get_colorspace, (const GdkPixbuf *));
-DEF_DLL_FN (int, gdk_pixbuf_get_n_channels, (const GdkPixbuf *));
-DEF_DLL_FN (gboolean, gdk_pixbuf_get_has_alpha, (const GdkPixbuf *));
-DEF_DLL_FN (int, gdk_pixbuf_get_bits_per_sample, (const GdkPixbuf *));
-
-#  if ! GLIB_CHECK_VERSION (2, 36, 0)
-DEF_DLL_FN (void, g_type_init, (void));
-#  endif
-DEF_DLL_FN (void, g_object_unref, (gpointer));
-DEF_DLL_FN (void, g_clear_error, (GError **));
-
-static bool
-init_svg_functions (void)
-{
-  HMODULE library, gdklib = NULL, glib = NULL, gobject = NULL;
-
-  if (!(glib = w32_delayed_load (Qglib))
-      || !(gobject = w32_delayed_load (Qgobject))
-      || !(gdklib = w32_delayed_load (Qgdk_pixbuf))
-      || !(library = w32_delayed_load (Qsvg)))
-    {
-      if (gdklib)  FreeLibrary (gdklib);
-      if (gobject) FreeLibrary (gobject);
-      if (glib)    FreeLibrary (glib);
-      return 0;
-    }
-
-  LOAD_DLL_FN (library, rsvg_handle_new);
-  LOAD_DLL_FN (library, rsvg_handle_get_dimensions);
-  LOAD_DLL_FN (library, rsvg_handle_write);
-  LOAD_DLL_FN (library, rsvg_handle_close);
-  LOAD_DLL_FN (library, rsvg_handle_get_pixbuf);
-  LOAD_DLL_FN (library, rsvg_handle_set_base_uri);
-
-  LOAD_DLL_FN (gdklib, gdk_pixbuf_get_width);
-  LOAD_DLL_FN (gdklib, gdk_pixbuf_get_height);
-  LOAD_DLL_FN (gdklib, gdk_pixbuf_get_pixels);
-  LOAD_DLL_FN (gdklib, gdk_pixbuf_get_rowstride);
-  LOAD_DLL_FN (gdklib, gdk_pixbuf_get_colorspace);
-  LOAD_DLL_FN (gdklib, gdk_pixbuf_get_n_channels);
-  LOAD_DLL_FN (gdklib, gdk_pixbuf_get_has_alpha);
-  LOAD_DLL_FN (gdklib, gdk_pixbuf_get_bits_per_sample);
-
-#  if ! GLIB_CHECK_VERSION (2, 36, 0)
-  LOAD_DLL_FN (gobject, g_type_init);
-#  endif
-  LOAD_DLL_FN (gobject, g_object_unref);
-  LOAD_DLL_FN (glib, g_clear_error);
-
-  return 1;
-}
-
-/* The following aliases for library functions allow dynamic loading
-   to be used on some platforms.  */
-
-#  undef gdk_pixbuf_get_bits_per_sample
-#  undef gdk_pixbuf_get_colorspace
-#  undef gdk_pixbuf_get_has_alpha
-#  undef gdk_pixbuf_get_height
-#  undef gdk_pixbuf_get_n_channels
-#  undef gdk_pixbuf_get_pixels
-#  undef gdk_pixbuf_get_rowstride
-#  undef gdk_pixbuf_get_width
-#  undef g_clear_error
-#  undef g_object_unref
-#  undef g_type_init
-#  undef rsvg_handle_close
-#  undef rsvg_handle_get_dimensions
-#  undef rsvg_handle_get_pixbuf
-#  undef rsvg_handle_new
-#  undef rsvg_handle_set_base_uri
-#  undef rsvg_handle_write
-
-#  define gdk_pixbuf_get_bits_per_sample fn_gdk_pixbuf_get_bits_per_sample
-#  define gdk_pixbuf_get_colorspace fn_gdk_pixbuf_get_colorspace
-#  define gdk_pixbuf_get_has_alpha fn_gdk_pixbuf_get_has_alpha
-#  define gdk_pixbuf_get_height fn_gdk_pixbuf_get_height
-#  define gdk_pixbuf_get_n_channels fn_gdk_pixbuf_get_n_channels
-#  define gdk_pixbuf_get_pixels fn_gdk_pixbuf_get_pixels
-#  define gdk_pixbuf_get_rowstride fn_gdk_pixbuf_get_rowstride
-#  define gdk_pixbuf_get_width fn_gdk_pixbuf_get_width
-#  define g_clear_error fn_g_clear_error
-#  define g_object_unref fn_g_object_unref
-#  if ! GLIB_CHECK_VERSION (2, 36, 0)
-#   define g_type_init fn_g_type_init
-#  endif
-#  define rsvg_handle_close fn_rsvg_handle_close
-#  define rsvg_handle_get_dimensions fn_rsvg_handle_get_dimensions
-#  define rsvg_handle_get_pixbuf fn_rsvg_handle_get_pixbuf
-#  define rsvg_handle_new fn_rsvg_handle_new
-#  define rsvg_handle_set_base_uri fn_rsvg_handle_set_base_uri
-#  define rsvg_handle_write fn_rsvg_handle_write
-
-# endif /* !WINDOWSNT  */
 
 /* Load SVG image IMG for use on frame F.  Value is true if
    successful.  */
@@ -9842,39 +8804,6 @@ non-numeric, there is no explicit limit on the size of images.  */);
   DEFSYM (QCpt_height, ":pt-height");
 #endif /* HAVE_GHOSTSCRIPT */
 
-#ifdef HAVE_NTGUI
-  /* Versions of libpng, libgif, and libjpeg that we were compiled with,
-     or -1 if no PNG/GIF support was compiled in.  This is tested by
-     w32-win.el to correctly set up the alist used to search for the
-     respective image libraries.  */
-  DEFSYM (Qlibpng_version, "libpng-version");
-  Fset (Qlibpng_version,
-#if HAVE_PNG
-	make_number (PNG_LIBPNG_VER)
-#else
-	make_number (-1)
-#endif
-	);
-  DEFSYM (Qlibgif_version, "libgif-version");
-  Fset (Qlibgif_version,
-#ifdef HAVE_GIF
-	make_number (GIFLIB_MAJOR * 10000
-		     + GIFLIB_MINOR * 100
-		     + GIFLIB_RELEASE)
-#else
-	make_number (-1)
-#endif
-        );
-  DEFSYM (Qlibjpeg_version, "libjpeg-version");
-  Fset (Qlibjpeg_version,
-#if HAVE_JPEG
-	make_number (JPEG_LIB_VERSION)
-#else
-	make_number (-1)
-#endif
-	);
-#endif
-
   DEFSYM (Qpbm, "pbm");
   ADD_IMAGE_TYPE (Qpbm);
 
@@ -9914,12 +8843,6 @@ non-numeric, there is no explicit limit on the size of images.  */);
 #if defined (HAVE_RSVG)
   DEFSYM (Qsvg, "svg");
   ADD_IMAGE_TYPE (Qsvg);
-#ifdef HAVE_NTGUI
-  /* Other libraries used directly by svg code.  */
-  DEFSYM (Qgdk_pixbuf, "gdk-pixbuf");
-  DEFSYM (Qglib, "glib");
-  DEFSYM (Qgobject, "gobject");
-#endif /* HAVE_NTGUI  */
 #endif /* HAVE_RSVG  */
 
   defsubr (&Sinit_image_library);

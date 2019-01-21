@@ -122,19 +122,12 @@ static struct rlimit nofile_limit;
 
 #ifdef HAVE_GLIB
 #include "xgselect.h"
-#ifndef WINDOWSNT
 #include <glib.h>
-#endif
 #endif
 
 #if defined HAVE_GETADDRINFO_A || defined HAVE_GNUTLS
 /* This is 0.1s in nanoseconds. */
 #define ASYNC_RETRY_NSEC 100000000
-#endif
-
-#ifdef WINDOWSNT
-extern int sys_select (int, fd_set *, fd_set *, fd_set *,
-                       const struct timespec *, const sigset_t *);
 #endif
 
 /* Work around GCC 4.3.0 bug with strict overflow checking; see
@@ -1663,10 +1656,8 @@ create_process (Lisp_Object process, char **new_argv, Lisp_Object current_dir)
 	}
     }
 
-#ifndef WINDOWSNT
   if (emacs_pipe (p->open_fd + READ_FROM_EXEC_MONITOR) != 0)
     report_file_error ("Creating pipe", Qnil);
-#endif
 
   fcntl (inchannel, F_SETFL, O_NONBLOCK);
   fcntl (outchannel, F_SETFL, O_NONBLOCK);
@@ -1693,7 +1684,6 @@ create_process (Lisp_Object process, char **new_argv, Lisp_Object current_dir)
   block_input ();
   block_child_signal (&oldset);
 
-#ifndef WINDOWSNT
   /* vfork, and prevent local vars from being clobbered by the vfork.  */
   Lisp_Object volatile current_dir_volatile = current_dir;
   Lisp_Object volatile lisp_pty_name_volatile = lisp_pty_name;
@@ -1730,7 +1720,6 @@ create_process (Lisp_Object process, char **new_argv, Lisp_Object current_dir)
   pty_flag = p->pty_flag;
 
   if (pid == 0)
-#endif /* not WINDOWSNT */
     {
       /* Make the pty be the controlling terminal of the process.  */
 #ifdef HAVE_PTYS
@@ -1832,11 +1821,7 @@ create_process (Lisp_Object process, char **new_argv, Lisp_Object current_dir)
 
       if (forkerr < 0)
 	forkerr = forkout;
-#ifdef WINDOWSNT
-      pid = child_setup (forkin, forkout, forkerr, new_argv, 1, current_dir);
-#else  /* not WINDOWSNT */
       child_setup (forkin, forkout, forkerr, new_argv, 1, current_dir);
-#endif /* not WINDOWSNT */
     }
 
   /* Back in the parent process.  */
@@ -1860,13 +1845,8 @@ create_process (Lisp_Object process, char **new_argv, Lisp_Object current_dir)
       close_process_fd (&p->open_fd[SUBPROCESS_STDIN]);
       close_process_fd (&p->open_fd[SUBPROCESS_STDOUT]);
 
-#ifdef WINDOWSNT
-      register_child (pid, inchannel);
-#endif /* WINDOWSNT */
-
       pset_tty_name (p, lisp_pty_name);
 
-#ifndef WINDOWSNT
       /* Wait for child_setup to complete in case that vfork is
 	 actually defined as fork.  The descriptor
 	 XPROCESS (proc)->open_fd[EXEC_MONITOR_OUTPUT]
@@ -1879,7 +1859,6 @@ create_process (Lisp_Object process, char **new_argv, Lisp_Object current_dir)
 	emacs_read (p->open_fd[READ_FROM_EXEC_MONITOR], &dummy, 1);
 	close_process_fd (&p->open_fd[READ_FROM_EXEC_MONITOR]);
       }
-#endif
       if (!NILP (p->stderrproc))
 	{
 	  struct Lisp_Process *pp = XPROCESS (p->stderrproc);
@@ -2006,10 +1985,6 @@ usage:  (make-pipe-process &rest ARGS)  */)
 
   fcntl (inchannel, F_SETFL, O_NONBLOCK);
   fcntl (outchannel, F_SETFL, O_NONBLOCK);
-
-#ifdef WINDOWSNT
-  register_aux_fd (inchannel);
-#endif
 
   /* Record this as an active process, with its channels.  */
   chan_process[inchannel] = proc;
@@ -2994,10 +2969,6 @@ connect_network_socket (Lisp_Object proc, Lisp_Object addrinfos,
       int protocol = XINT (XCAR (addrinfo));
       Lisp_Object ip_address = XCDR (addrinfo);
 
-#ifdef WINDOWSNT
-    retry_connect:
-#endif
-
       addrlen = get_lisp_to_sockaddr_size (ip_address, &family);
       if (sa)
 	free (sa);
@@ -3128,7 +3099,6 @@ connect_network_socket (Lisp_Object proc, Lisp_Object addrinfos,
       if (p->is_non_blocking_client && xerrno == EINPROGRESS)
 	break;
 
-#ifndef WINDOWSNT
       if (xerrno == EINTR)
 	{
 	  /* Unlike most other syscalls connect() cannot be called
@@ -3160,7 +3130,6 @@ connect_network_socket (Lisp_Object proc, Lisp_Object addrinfos,
 	  if (NILP (addrinfos))
 	    report_file_errno ("Failed connect", Qnil, xerrno);
 	}
-#endif /* !WINDOWSNT */
 
       /* Discard the unwind protect closing S.  */
       specpdl_ptr = specpdl + count;
@@ -3168,11 +3137,6 @@ connect_network_socket (Lisp_Object proc, Lisp_Object addrinfos,
       s = -1;
       if (0 <= socket_to_use)
 	break;
-
-#ifdef WINDOWSNT
-      if (xerrno == EINTR)
-	goto retry_connect;
-#endif
     }
 
   if (s >= 0)
@@ -3505,11 +3469,6 @@ usage: (make-network-process &rest ARGS)  */)
 
   /* Save arguments for process-contact and clone-process.  */
   contact = Flist (nargs, args);
-
-#ifdef WINDOWSNT
-  /* Ensure socket support is loaded if available.  */
-  init_winsock (TRUE);
-#endif
 
   /* :type TYPE  (nil: stream, datagram */
   tem = Fplist_get (contact, QCtype);
@@ -4137,7 +4096,7 @@ format; see the description of ADDRESS in `make-network-process'.
 If the information is not available, return nil.  */)
   (void)
 {
-#if (defined HAVE_NET_IF_H && defined SIOCGIFCONF) || defined WINDOWSNT
+#if (defined HAVE_NET_IF_H && defined SIOCGIFCONF)
   return network_interface_list ();
 #else
   return Qnil;
@@ -4157,8 +4116,7 @@ Data that is unavailable is returned as nil.  */)
 {
 #if ((defined HAVE_NET_IF_H			       \
       && (defined SIOCGIFADDR || defined SIOCGIFHWADDR \
-	  || defined SIOCGIFFLAGS))		       \
-     || defined WINDOWSNT)
+	  || defined SIOCGIFFLAGS)))
   return network_interface_info (ifname);
 #else
   return Qnil;
@@ -5337,32 +5295,11 @@ wait_reading_process_output (intmax_t time_limit, int nsecs, int read_kbd,
 
 	      p = XPROCESS (proc);
 
-#ifndef WINDOWSNT
 	      {
 		socklen_t xlen = sizeof (xerrno);
 		if (getsockopt (channel, SOL_SOCKET, SO_ERROR, &xerrno, &xlen))
 		  xerrno = errno;
 	      }
-#else
-	      /* On MS-Windows, getsockopt clears the error for the
-		 entire process, which may not be the right thing; see
-		 w32.c.  Use getpeername instead.  */
-	      {
-		struct sockaddr pname;
-		socklen_t pnamelen = sizeof (pname);
-
-		/* If connection failed, getpeername will fail.  */
-		xerrno = 0;
-		if (getpeername (channel, &pname, &pnamelen) < 0)
-		  {
-		    /* Obtain connect failure code through error slippage.  */
-		    char dummy;
-		    xerrno = errno;
-		    if (errno == ENOTCONN && read (channel, &dummy, 1) < 0)
-		      xerrno = errno;
-		  }
-	      }
-#endif
 	      if (xerrno)
 		{
 		  Lisp_Object addrinfos
@@ -6377,12 +6314,7 @@ traffic.  */)
 	  && (!EQ (p->filter, Qt) || EQ (p->status, Qlisten)))
 	{
 	  add_process_read_fd (p->infd);
-#ifdef WINDOWSNT
-	  if (fd_info[ p->infd ].flags & FILE_SERIAL)
-	    PurgeComm (fd_info[ p->infd ].hnd, PURGE_RXABORT | PURGE_RXCLEAR);
-#else /* not WINDOWSNT */
 	  tcflush (p->infd, TCIFLUSH);
-#endif /* not WINDOWSNT */
 	}
       pset_command (p, Qnil);
       return process;
@@ -6521,10 +6453,8 @@ process has been transmitted to the serial port.  */)
     send_process (proc, "\004", 1, Qnil);
   else if (EQ (XPROCESS (proc)->type, Qserial))
     {
-#ifndef WINDOWSNT
       if (tcdrain (XPROCESS (proc)->outfd) != 0)
 	report_file_error ("Failed tcdrain", Qnil);
-#endif /* not WINDOWSNT */
       /* Do nothing on Windows because writes are blocking.  */
     }
   else
@@ -6565,7 +6495,7 @@ process has been transmitted to the serial port.  */)
     }
   return process;
 }
-
+
 /* The main Emacs thread records child processes in three places:
 
    - Vprocess_alist, for asynchronous subprocesses, which are child
@@ -7269,7 +7199,7 @@ restore_nofile_limit (void)
 #endif
 }
 
-
+
 /* This is not called "init_process" because that is the name of a
    Mach system call, so it would cause problems on Darwin systems.  */
 void
@@ -7283,7 +7213,7 @@ init_process_emacs (int sockfd)
   if (! noninteractive || initialized)
 #endif
     {
-#if defined HAVE_GLIB && !defined WINDOWSNT
+#if defined HAVE_GLIB
       /* Tickle glib's child-handling code.  Ask glib to wait for Emacs itself;
 	 this should always fail, but is enough to initialize glib's
 	 private SIGCHLD handler, allowing catch_child_signal to copy

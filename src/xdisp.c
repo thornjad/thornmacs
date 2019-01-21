@@ -29641,7 +29641,7 @@ draw_row_with_mouse_face (struct window *w, int start_x, struct glyph_row *row,
       return;
     }
 #endif
-#if defined (HAVE_GPM) || defined (WINDOWSNT)
+#if defined (HAVE_GPM)
   tty_draw_row_with_mouse_face (w, row, start_hpos, end_hpos, draw);
 #endif
 }

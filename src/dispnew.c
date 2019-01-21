@@ -50,10 +50,6 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include <errno.h>
 
 #include <fpending.h>
-
-#ifdef WINDOWSNT
-#include "w32.h"
-#endif
 
 /* Structure to pass dimensions around.  Used for character bounding
    boxes, glyph matrix dimensions and alike.  */
@@ -5765,10 +5761,8 @@ init_display (void)
 
   /* If running as a daemon, no need to initialize any frames/terminal,
      except on Windows, where we at least want to initialize it.  */
-#ifndef WINDOWSNT
   if (IS_DAEMON)
       return;
-#endif
 
   /* If the user wants to use a window system, we shouldn't bother
      initializing the terminal.  This is especially important when the
@@ -5835,11 +5829,7 @@ init_display (void)
   if (! isatty (STDIN_FILENO))
     fatal ("standard input is not a tty");
 
-#ifdef WINDOWSNT
-  terminal_type = (char *)"w32console";
-#else
   terminal_type = getenv ("TERM");
-#endif
   if (!terminal_type)
     {
 #ifdef HAVE_WINDOW_SYSTEM

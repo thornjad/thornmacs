@@ -32,62 +32,6 @@ typedef struct
   double b;
 } lcmsJab_t;
 
-#ifdef WINDOWSNT
-# include <windows.h>
-# include "w32.h"
-
-DEF_DLL_FN (cmsFloat64Number, cmsCIE2000DeltaE,
-	    (const cmsCIELab* Lab1, const cmsCIELab* Lab2, cmsFloat64Number Kl,
-	     cmsFloat64Number Kc, cmsFloat64Number Kh));
-DEF_DLL_FN (cmsHANDLE, cmsCIECAM02Init,
-	    (cmsContext ContextID, const cmsViewingConditions* pVC));
-DEF_DLL_FN (void, cmsCIECAM02Forward,
-	    (cmsHANDLE hModel, const cmsCIEXYZ* pIn, cmsJCh* pOut));
-DEF_DLL_FN (void, cmsCIECAM02Reverse,
-	    (cmsHANDLE hModel, const cmsJCh* pIn, cmsCIEXYZ* pOut));
-DEF_DLL_FN (void, cmsCIECAM02Done, (cmsHANDLE hModel));
-DEF_DLL_FN (cmsBool, cmsWhitePointFromTemp,
-	    (cmsCIExyY* WhitePoint, cmsFloat64Number TempK));
-DEF_DLL_FN (void, cmsxyY2XYZ, (cmsCIEXYZ* Dest, const cmsCIExyY* Source));
-
-static bool lcms_initialized;
-
-static bool
-init_lcms_functions (void)
-{
-  HMODULE library = w32_delayed_load (Qlcms2);
-
-  if (!library)
-    return false;
-
-  LOAD_DLL_FN (library, cmsCIE2000DeltaE);
-  LOAD_DLL_FN (library, cmsCIECAM02Init);
-  LOAD_DLL_FN (library, cmsCIECAM02Forward);
-  LOAD_DLL_FN (library, cmsCIECAM02Reverse);
-  LOAD_DLL_FN (library, cmsCIECAM02Done);
-  LOAD_DLL_FN (library, cmsWhitePointFromTemp);
-  LOAD_DLL_FN (library, cmsxyY2XYZ);
-  return true;
-}
-
-# undef cmsCIE2000DeltaE
-# undef cmsCIECAM02Init
-# undef cmsCIECAM02Forward
-# undef cmsCIECAM02Reverse
-# undef cmsCIECAM02Done
-# undef cmsWhitePointFromTemp
-# undef cmsxyY2XYZ
-
-# define cmsCIE2000DeltaE      fn_cmsCIE2000DeltaE
-# define cmsCIECAM02Init       fn_cmsCIECAM02Init
-# define cmsCIECAM02Forward    fn_cmsCIECAM02Forward
-# define cmsCIECAM02Reverse    fn_cmsCIECAM02Reverse
-# define cmsCIECAM02Done       fn_cmsCIECAM02Done
-# define cmsWhitePointFromTemp fn_cmsWhitePointFromTemp
-# define cmsxyY2XYZ            fn_cmsxyY2XYZ
-
-#endif	/* WINDOWSNT */
-
 static bool
 parse_lab_list (Lisp_Object lab_list, cmsCIELab *color)
 {
@@ -120,16 +64,6 @@ chroma, and hue, respectively. The parameters each default to 1.  */)
 {
   cmsCIELab Lab1, Lab2;
   cmsFloat64Number Kl, Kc, Kh;
-
-#ifdef WINDOWSNT
-  if (!lcms_initialized)
-    lcms_initialized = init_lcms_functions ();
-  if (!lcms_initialized)
-    {
-      message1 ("lcms2 library not found");
-      return Qnil;
-    }
-#endif
 
   if (!(CONSP (color1) && parse_lab_list (color1, &Lab1)))
     signal_error ("Invalid color", color1);
@@ -326,16 +260,6 @@ which see.  */)
   cmsJCh jch;
   cmsCIEXYZ xyz, xyzw;
 
-#ifdef WINDOWSNT
-  if (!lcms_initialized)
-    lcms_initialized = init_lcms_functions ();
-  if (!lcms_initialized)
-    {
-      message1 ("lcms2 library not found");
-      return Qnil;
-    }
-#endif
-
   if (!(CONSP (color) && parse_xyz_list (color, &xyz)))
     signal_error ("Invalid color", color);
   if (NILP (whitepoint))
@@ -362,16 +286,6 @@ which see.  */)
   cmsViewingConditions vc;
   cmsJCh jch;
   cmsCIEXYZ xyz, xyzw;
-
-#ifdef WINDOWSNT
-  if (!lcms_initialized)
-    lcms_initialized = init_lcms_functions ();
-  if (!lcms_initialized)
-    {
-      message1 ("lcms2 library not found");
-      return Qnil;
-    }
-#endif
 
   if (!(CONSP (color) && parse_jch_list (color, &jch)))
     signal_error ("Invalid color", color);
@@ -403,16 +317,6 @@ which see.  */)
   cmsCIEXYZ xyzw;
   double FL, k, k4;
 
-#ifdef WINDOWSNT
-  if (!lcms_initialized)
-    lcms_initialized = init_lcms_functions ();
-  if (!lcms_initialized)
-    {
-      message1 ("lcms2 library not found");
-      return Qnil;
-    }
-#endif
-
   if (!(CONSP (color) && parse_jch_list (color, &jch)))
     signal_error ("Invalid color", color);
   if (NILP (whitepoint))
@@ -443,16 +347,6 @@ which see.  */)
   lcmsJab_t jab;
   cmsCIEXYZ xyzw;
   double FL, k, k4;
-
-#ifdef WINDOWSNT
-  if (!lcms_initialized)
-    lcms_initialized = init_lcms_functions ();
-  if (!lcms_initialized)
-    {
-      message1 ("lcms2 library not found");
-      return Qnil;
-    }
-#endif
 
   if (!(CONSP (color) && parse_jab_list (color, &jab)))
     signal_error ("Invalid color", color);
@@ -499,16 +393,6 @@ The default viewing conditions are (20 100 1 1).  */)
   lcmsJab_t jab1, jab2;
   double FL, k, k4;
 
-#ifdef WINDOWSNT
-  if (!lcms_initialized)
-    lcms_initialized = init_lcms_functions ();
-  if (!lcms_initialized)
-    {
-      message1 ("lcms2 library not found");
-      return Qnil;
-    }
-#endif
-
   if (!(CONSP (color1) && parse_xyz_list (color1, &xyz1)))
     signal_error ("Invalid color", color1);
   if (!(CONSP (color2) && parse_xyz_list (color2, &xyz2)))
@@ -544,16 +428,6 @@ Valid range of TEMPERATURE is from 4000K to 25000K.  */)
   cmsCIExyY whitepoint;
   cmsCIEXYZ wp;
 
-#ifdef WINDOWSNT
-  if (!lcms_initialized)
-    lcms_initialized = init_lcms_functions ();
-  if (!lcms_initialized)
-    {
-      message1 ("lcms2 library not found");
-      return Qnil;
-    }
-#endif
-
   CHECK_NUMBER_OR_FLOAT (temperature);
 
   tempK = XFLOATINT (temperature);
@@ -567,24 +441,9 @@ DEFUN ("lcms2-available-p", Flcms2_available_p, Slcms2_available_p, 0, 0, 0,
        doc: /* Return t if lcms2 color calculations are available in this instance of Emacs.  */)
      (void)
 {
-#ifdef WINDOWSNT
-  Lisp_Object found = Fassq (Qlcms2, Vlibrary_cache);
-  if (CONSP (found))
-    return XCDR (found);
-  else
-    {
-      Lisp_Object status;
-      lcms_initialized = init_lcms_functions ();
-      status = lcms_initialized ? Qt : Qnil;
-      Vlibrary_cache = Fcons (Fcons (Qlcms2, status), Vlibrary_cache);
-      return status;
-    }
-#else  /* !WINDOWSNT */
   return Qt;
-#endif
 }
 
-
 /* Initialization */
 void
 syms_of_lcms2 (void)

@@ -37,10 +37,6 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include "puresize.h"
 #include "gnutls.h"
 
-#if defined WINDOWSNT && defined HAVE_GNUTLS3
-# define gnutls_rnd w32_gnutls_rnd
-#endif
-
 /* Random data-structure functions.  */
 
 DEFUN ("compare-strings", Fcompare_strings, Scompare_strings, 6, 7, 0,
@@ -197,7 +193,7 @@ If your system does not support a locale environment, this function
 behaves like `string-lessp'.  */)
   (Lisp_Object s1, Lisp_Object s2, Lisp_Object locale, Lisp_Object ignore_case)
 {
-#if defined __STDC_ISO_10646__ || defined WINDOWSNT
+#if defined __STDC_ISO_10646__
   /* Check parameters.  */
   if (SYMBOLP (s1))
     s1 = SYMBOL_NAME (s1);
@@ -210,9 +206,9 @@ behaves like `string-lessp'.  */)
 
   return (str_collate (s1, s2, locale, ignore_case) < 0) ? Qt : Qnil;
 
-#else  /* !__STDC_ISO_10646__, !WINDOWSNT */
+#else  /* !__STDC_ISO_10646__ */
   return Fstring_lessp (s1, s2);
-#endif /* !__STDC_ISO_10646__, !WINDOWSNT */
+#endif /* !__STDC_ISO_10646__ */
 }
 
 DEFUN ("string-collate-equalp", Fstring_collate_equalp, Sstring_collate_equalp, 2, 4, 0,
@@ -245,7 +241,7 @@ behaves like `string-equal'.
 Do NOT use this function to compare file names for equality.  */)
   (Lisp_Object s1, Lisp_Object s2, Lisp_Object locale, Lisp_Object ignore_case)
 {
-#if defined __STDC_ISO_10646__ || defined WINDOWSNT
+#if defined __STDC_ISO_10646__
   /* Check parameters.  */
   if (SYMBOLP (s1))
     s1 = SYMBOL_NAME (s1);
@@ -258,9 +254,9 @@ Do NOT use this function to compare file names for equality.  */)
 
   return (str_collate (s1, s2, locale, ignore_case) == 0) ? Qt : Qnil;
 
-#else  /* !__STDC_ISO_10646__, !WINDOWSNT */
+#else  /* !__STDC_ISO_10646__ */
   return Fstring_equal (s1, s2);
-#endif /* !__STDC_ISO_10646__, !WINDOWSNT */
+#endif /* !__STDC_ISO_10646__ */
 }
 
 extern Lisp_Object concat (ptrdiff_t nargs, Lisp_Object *args,

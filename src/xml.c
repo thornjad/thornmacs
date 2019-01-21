@@ -27,95 +27,16 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include <libxml/parser.h>
 #include <libxml/HTMLparser.h>
 
-
-#ifdef WINDOWSNT
-
-# include <windows.h>
-# include "w32.h"
-
-DEF_DLL_FN (htmlDocPtr, htmlReadMemory,
-	     (const char *, int, const char *, const char *, int));
-DEF_DLL_FN (xmlDocPtr, xmlReadMemory,
-	     (const char *, int, const char *, const char *, int));
-DEF_DLL_FN (xmlNodePtr, xmlDocGetRootElement, (xmlDocPtr));
-DEF_DLL_FN (void, xmlFreeDoc, (xmlDocPtr));
-DEF_DLL_FN (void, xmlCleanupParser, (void));
-DEF_DLL_FN (void, xmlCheckVersion, (int));
-
-static bool
-libxml2_loaded_p (void)
-{
-  Lisp_Object found = Fassq (Qlibxml2, Vlibrary_cache);
-
-  return CONSP (found) && EQ (XCDR (found), Qt);
-}
-
-# undef htmlReadMemory
-# undef xmlCheckVersion
-# undef xmlCleanupParser
-# undef xmlDocGetRootElement
-# undef xmlFreeDoc
-# undef xmlReadMemory
-
-# define htmlReadMemory fn_htmlReadMemory
-# define xmlCheckVersion fn_xmlCheckVersion
-# define xmlCleanupParser fn_xmlCleanupParser
-# define xmlDocGetRootElement fn_xmlDocGetRootElement
-# define xmlFreeDoc fn_xmlFreeDoc
-# define xmlReadMemory fn_xmlReadMemory
-
-static bool
-load_dll_functions (HMODULE library)
-{
-  LOAD_DLL_FN (library, htmlReadMemory);
-  LOAD_DLL_FN (library, xmlReadMemory);
-  LOAD_DLL_FN (library, xmlDocGetRootElement);
-  LOAD_DLL_FN (library, xmlFreeDoc);
-  LOAD_DLL_FN (library, xmlCleanupParser);
-  LOAD_DLL_FN (library, xmlCheckVersion);
-  return true;
-}
-
-#else  /* !WINDOWSNT */
-
 static bool
 libxml2_loaded_p (void)
 {
   return true;
 }
-
-#endif	/* !WINDOWSNT */
 
 bool
 init_libxml2_functions (void)
 {
-#ifdef WINDOWSNT
-  if (libxml2_loaded_p ())
-    return true;
-  else
-    {
-      HMODULE library;
-
-      if (!(library = w32_delayed_load (Qlibxml2)))
-	{
-	  message1 ("libxml2 library not found");
-	  return false;
-	}
-
-      if (! load_dll_functions (library))
-	goto bad_library;
-
-      Vlibrary_cache = Fcons (Fcons (Qlibxml2, Qt), Vlibrary_cache);
-      return true;
-    }
-
- bad_library:
-  Vlibrary_cache = Fcons (Fcons (Qlibxml2, Qnil), Vlibrary_cache);
-
-  return false;
-#else  /* !WINDOWSNT */
   return true;
-#endif	/* !WINDOWSNT */
 }
 
 static Lisp_Object
@@ -267,27 +188,3 @@ xml_cleanup_parser (void)
 }
 
 #endif /* HAVE_LIBXML2 */
-
-//DEFUN ("libxml-available-p", Flibxml_available_p, Slibxml_available_p, 0, 0, 0,
-//       doc: /* Return t if libxml2 support is available in this instance of Emacs.*/)
-//  (void)
-//{
-//#ifdef HAVE_LIBXML2
-//# ifdef WINDOWSNT
-//  Lisp_Object found = Fassq (Qlibxml2, Vlibrary_cache);
-//  if (CONSP (found))
-//    return XCDR (found);
-//  else
-//    {
-//      Lisp_Object status;
-//      status = init_libxml2_functions () ? Qt : Qnil;
-//      Vlibrary_cache = Fcons (Fcons (Qlibxml2, status), Vlibrary_cache);
-//      return status;
-//    }
-//# else
-//  return Qt;
-//# endif /* WINDOWSNT */
-//#else
-//  return Qnil;
-//#endif	/* HAVE_LIBXML2 */
-//}

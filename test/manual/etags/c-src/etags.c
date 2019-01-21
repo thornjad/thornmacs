@@ -94,30 +94,6 @@ char pot_etags_version[] = "@(#) pot revision number is 17.38.1.4";
 # define _GNU_SOURCE 1		/* enables some compiler checks on GNU */
 #endif
 
-/* WIN32_NATIVE is for XEmacs.
-   MSDOS, WINDOWSNT, DOS_NT are for Emacs. */
-#ifdef WIN32_NATIVE
-# undef MSDOS
-# undef  WINDOWSNT
-# define WINDOWSNT
-#endif /* WIN32_NATIVE */
-
-#ifdef MSDOS
-# undef MSDOS
-# define MSDOS true
-# include <sys/param.h>
-#else
-# define MSDOS false
-#endif /* MSDOS */
-
-#ifdef WINDOWSNT
-# include <direct.h>
-# define MAXPATHLEN _MAX_PATH
-# undef HAVE_NTGUI
-# undef  DOS_NT
-# define DOS_NT
-#endif /* WINDOWSNT */
-
 #include <unistd.h>
 #include <stdarg.h>
 #include <stdlib.h>

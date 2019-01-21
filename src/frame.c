@@ -1115,11 +1115,6 @@ affects all frames on the same terminal device.  */)
   Lisp_Object frame, tem;
   struct frame *sf = SELECTED_FRAME ();
 
-#ifdef WINDOWSNT                           /* This should work now! */
-  if (sf->output_method != output_termcap)
-    error ("Not using an ASCII terminal now; cannot make a new ASCII frame");
-#endif
-
   {
     Lisp_Object terminal;
 

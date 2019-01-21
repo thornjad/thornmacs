@@ -72,11 +72,7 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 # pragma GCC diagnostic ignored "-Wclobbered"
 #endif
 
-#ifdef WINDOWSNT
-char const DEV_TTY[] = "CONOUT$";
-#else
 char const DEV_TTY[] = "/dev/tty";
-#endif
 
 /* Variables for blockinput.h:  */
 
@@ -1018,9 +1014,6 @@ command_loop (void)
     {
       /* Comes here from handle_sigsegv (see sysdep.c) and
 	 stack_overflow_handler (see w32fns.c).  */
-#ifdef WINDOWSNT
-      w32_reset_stack_overflow_guard ();
-#endif
       init_eval ();
       Vinternal__top_level_message = recover_top_level_message;
     }
@@ -2132,23 +2125,14 @@ read_decoded_event_from_main_queue (struct timespec *end_time,
                                     Lisp_Object prev_event,
                                     bool *used_mouse_menu)
 {
-#ifndef WINDOWSNT
 #define MAX_ENCODED_BYTES 16
   Lisp_Object events[MAX_ENCODED_BYTES];
   int n = 0;
-#endif
   while (true)
     {
       Lisp_Object nextevt
         = read_event_from_main_queue (end_time, local_getcjmp,
                                       used_mouse_menu);
-#ifdef WINDOWSNT
-      /* w32_console already returns decoded events.  It either reads
-	 Unicode characters from the Windows keyboard input, or
-	 converts characters encoded in the current codepage into
-	 Unicode.  See w32inevt.c:key_event, near its end.  */
-      return nextevt;
-#else
       struct frame *frame = XFRAME (selected_frame);
       struct terminal *terminal = frame->terminal;
       if (!((FRAME_TERMCAP_P (frame))
@@ -2215,7 +2199,6 @@ read_decoded_event_from_main_queue (struct timespec *end_time,
 	      = Fcons (events[--n], Vunread_command_events);
 	  return events[0];
 	}
-#endif
     }
 }
 
@@ -6830,9 +6813,6 @@ tty_read_avail_input (struct terminal *terminal,
      the kbd_buffer can really hold.  That may prevent loss
      of characters on some systems when input is stuffed at us.  */
   unsigned char cbuf[KBD_BUFFER_SIZE - 1];
-#ifndef WINDOWSNT
-  int n_to_read;
-#endif
   int i;
   struct tty_display_info *tty = terminal->display_info.tty;
   int nread = 0;
@@ -6850,11 +6830,6 @@ tty_read_avail_input (struct terminal *terminal,
 
   /* XXX I think the following code should be moved to separate hook
      functions in system-dependent files.  */
-#ifdef WINDOWSNT
-  /* FIXME: AFAIK, tty_read_avail_input is not used under w32 since the non-GUI
-     code sets read_socket_hook to w32_console_read_socket instead!  */
-  return 0;
-#else /* not WINDOWSNT */
   if (! tty->term_initted)      /* In case we get called during bootstrap.  */
     return 0;
 
@@ -6943,8 +6918,6 @@ tty_read_avail_input (struct terminal *terminal,
 
   if (nread <= 0)
     return nread;
-
-#endif /* not WINDOWSNT */
 
   for (i = 0; i < nread; i++)
     {
@@ -11676,10 +11649,6 @@ keys_of_keyboard (void)
 
   initial_define_lispy_key (Vspecial_event_map, "config-changed-event",
 			    "ignore");
-#if defined (WINDOWSNT)
-  initial_define_lispy_key (Vspecial_event_map, "language-change",
-			    "ignore");
-#endif
   initial_define_lispy_key (Vspecial_event_map, "focus-in",
 			    "handle-focus-in");
   initial_define_lispy_key (Vspecial_event_map, "focus-out",

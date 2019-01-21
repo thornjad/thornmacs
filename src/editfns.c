@@ -65,10 +65,6 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 
 #define TM_YEAR_BASE 1900
 
-#ifdef WINDOWSNT
-extern Lisp_Object w32_get_internal_run_time (void);
-#endif
-
 extern struct lisp_time lisp_time_struct (Lisp_Object, int *);
 static Lisp_Object format_time_string (char const *, ptrdiff_t, struct timespec,
 				       Lisp_Object, struct tm *);
@@ -280,11 +276,7 @@ init_editfns (bool dumping)
      or the effective uid if those are unset.  */
   user_name = getenv ("LOGNAME");
   if (!user_name)
-#ifdef WINDOWSNT
-    user_name = getenv ("USERNAME");	/* it's USERNAME on NT */
-#else  /* WINDOWSNT */
     user_name = getenv ("USER");
-#endif /* WINDOWSNT */
   if (!user_name)
     {
       pw = getpwuid (geteuid ());
@@ -684,11 +676,7 @@ does the same thing as `current-time'.  */)
     }
   return make_lisp_time (make_timespec (secs, usecs * 1000));
 #else /* ! HAVE_GETRUSAGE  */
-#ifdef WINDOWSNT
-  return w32_get_internal_run_time ();
-#else /* ! WINDOWSNT  */
   return Fcurrent_time ();
-#endif /* WINDOWSNT  */
 #endif /* HAVE_GETRUSAGE  */
 }
 
@@ -1256,21 +1244,11 @@ emacs_setenv_TZ (const char *tzstring)
     }
 
 
-#ifndef WINDOWSNT
   /* Modifying *TZVAL merely requires calling tzset (which is the
      caller's responsibility).  However, modifying TZVAL requires
      calling putenv; although this is not thread-safe, in practice this
      runs only on startup when there is only one thread.  */
   bool need_putenv = new_tzvalbuf;
-#else
-  /* MS-Windows 'putenv' copies the argument string into a block it
-     allocates, so modifying *TZVAL will not change the environment.
-     However, the other threads run by Emacs on MS-Windows never call
-     'xputenv' or 'putenv' or 'unsetenv', so the original cause for the
-     dicey in-place modification technique doesn't exist there in the
-     first place.  */
-  bool need_putenv = true;
-#endif
   if (need_putenv)
     xputenv (tzval);
 

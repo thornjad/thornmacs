@@ -21,14 +21,6 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 
 #include "regex.h"
 
-#ifdef WINDOWSNT
-#include <sys/socket.h>
-#endif
-
-#ifdef MSDOS
-#include <signal.h>		/* sigset_t */
-#endif
-
 #include "sysselect.h"		/* FIXME */
 #include "systime.h"		/* FIXME */
 #include "systhread.h"

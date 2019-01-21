@@ -1351,14 +1351,7 @@ Return t if the file exists and loads successfully.  */)
     }
   else if (!is_module)
     {
-#ifdef WINDOWSNT
-      emacs_close (fd);
-      clear_unwind_protect (fd_index);
-      efound = ENCODE_FILE (found);
-      stream = emacs_fopen (SSDATA (efound), fmode);
-#else
       stream = fdopen (fd, fmode);
-#endif
     }
 
   if (is_module)
