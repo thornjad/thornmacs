@@ -761,6 +761,7 @@ make_frame (bool mini_p)
   f->want_fullscreen = FULLSCREEN_NONE;
   f->undecorated = false;
   f->no_special_glyphs = false;
+  f->override_redirect = false;
   f->skip_taskbar = false;
   f->no_focus_on_map = false;
   f->no_accept_focus = false;
