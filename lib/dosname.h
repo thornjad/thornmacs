@@ -17,6 +17,9 @@
 
    From Paul Eggert and Jim Meyering.  */
 
+/* aero note: leaving this for now since IS_ABSOLUTE_FILE_NAME is
+defined here */
+
 #ifndef _DOSNAME_H
 #define _DOSNAME_H
 

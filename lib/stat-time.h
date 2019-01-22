@@ -168,16 +168,6 @@ get_stat_birthtime (struct stat const *st _GL_UNUSED)
 #elif defined HAVE_STRUCT_STAT_ST_BIRTHTIMENSEC
   t.tv_sec = st->st_birthtime;
   t.tv_nsec = st->st_birthtimensec;
-#elif (defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__
-  /* Native Windows platforms (but not Cygwin) put the "file creation
-     time" in st_ctime (!).  See
-     <https://msdn.microsoft.com/en-us/library/14h5k7ff(VS.80).aspx>.  */
-# if _GL_WINDOWS_STAT_TIMESPEC
-  t = st->st_ctim;
-# else
-  t.tv_sec = st->st_ctime;
-  t.tv_nsec = 0;
-# endif
 #else
   /* Birth time is not supported.  */
   t.tv_sec = -1;

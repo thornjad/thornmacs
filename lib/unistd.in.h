@@ -59,12 +59,7 @@
    it before we  #define unlink rpl_unlink.  */
 /* Cygwin 1.7.1 declares symlinkat in <stdio.h>, not in <unistd.h>.  */
 /* But avoid namespace pollution on glibc systems.  */
-#if (!(defined SEEK_CUR && defined SEEK_END && defined SEEK_SET) \
-     || ((@GNULIB_UNLINK@ || defined GNULIB_POSIXCHECK) \
-         && ((defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__)) \
-     || ((@GNULIB_SYMLINKAT@ || defined GNULIB_POSIXCHECK) \
-         && defined __CYGWIN__)) \
-    && ! defined __GLIBC__
+#if (!(defined SEEK_CUR && defined SEEK_END && defined SEEK_SET)) && ! defined __GLIBC__
 # include <stdio.h>
 #endif
 
@@ -86,22 +81,6 @@
 # define __need_system_stdlib_h
 # include <stdlib.h>
 # undef __need_system_stdlib_h
-#endif
-
-/* Native Windows platforms declare chdir, getcwd, rmdir in
-   <io.h> and/or <direct.h>, not in <unistd.h>.
-   They also declare access(), chmod(), close(), dup(), dup2(), isatty(),
-   lseek(), read(), unlink(), write() in <io.h>.  */
-#if ((@GNULIB_CHDIR@ || @GNULIB_GETCWD@ || @GNULIB_RMDIR@ \
-      || defined GNULIB_POSIXCHECK) \
-     && ((defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__))
-# include <io.h>     /* mingw32, mingw64 */
-# include <direct.h> /* mingw64, MSVC 9 */
-#elif (@GNULIB_CLOSE@ || @GNULIB_DUP@ || @GNULIB_DUP2@ || @GNULIB_ISATTY@ \
-       || @GNULIB_LSEEK@ || @GNULIB_READ@ || @GNULIB_UNLINK@ || @GNULIB_WRITE@ \
-       || defined GNULIB_POSIXCHECK) \
-      && ((defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__)
-# include <io.h>
 #endif
 
 /* AIX and OSF/1 5.1 declare getdomainname in <netdb.h>, not in <unistd.h>.

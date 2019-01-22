@@ -54,24 +54,6 @@
 
 /* The definition of _GL_WARN_ON_USE is copied here.  */
 
-/* Before doing "#define mkdir rpl_mkdir" below, we need to include all
-   headers that may declare mkdir().  Native Windows platforms declare mkdir
-   in <io.h> and/or <direct.h>, not in <unistd.h>.  */
-#if (defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__
-# include <io.h>     /* mingw32, mingw64 */
-# include <direct.h> /* mingw64, MSVC 9 */
-#endif
-
-/* Native Windows platforms declare umask() in <io.h>.  */
-#if 0 && ((defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__)
-# include <io.h>
-#endif
-
-/* Large File Support on native Windows.  */
-#if @WINDOWS_64_BIT_ST_SIZE@
-# define stat _stati64
-#endif
-
 /* Optionally, override 'struct stat' on native Windows.  */
 #if @GNULIB_OVERRIDES_STRUCT_STAT@
 
@@ -572,28 +554,7 @@ _GL_FUNCDECL_RPL (mkdir, int, (char const *name, mode_t mode)
                               _GL_ARG_NONNULL ((1)));
 _GL_CXXALIAS_RPL (mkdir, int, (char const *name, mode_t mode));
 #else
-/* mingw's _mkdir() function has 1 argument, but we pass 2 arguments.
-   Additionally, it declares _mkdir (and depending on compile flags, an
-   alias mkdir), only in the nonstandard includes <direct.h> and <io.h>,
-   which are included above.  */
-# if (defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__
-
-#  if !GNULIB_defined_rpl_mkdir
-static int
-rpl_mkdir (char const *name, mode_t mode)
-{
-  return _mkdir (name);
-}
-#   define GNULIB_defined_rpl_mkdir 1
-#  endif
-
-#  if !(defined __cplusplus && defined GNULIB_NAMESPACE)
-#   define mkdir rpl_mkdir
-#  endif
-_GL_CXXALIAS_RPL (mkdir, int, (char const *name, mode_t mode));
-# else
 _GL_CXXALIAS_SYS (mkdir, int, (char const *name, mode_t mode));
-# endif
 #endif
 _GL_CXXALIASWARN (mkdir);
 

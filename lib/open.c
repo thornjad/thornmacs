@@ -86,11 +86,6 @@ open (const char *filename, int flags, ...)
   flags &= ~O_NONBLOCK;
 #endif
 
-#if (defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__
-  if (strcmp (filename, "/dev/null") == 0)
-    filename = "NUL";
-#endif
-
 #if OPEN_TRAILING_SLASH_BUG
   /* If the filename ends in a slash and one of O_CREAT, O_WRONLY, O_RDWR
      is specified, then fail.

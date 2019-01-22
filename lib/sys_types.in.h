@@ -83,13 +83,5 @@ typedef unsigned long long int rpl_ino_t;
 # define _GL_WINDOWS_STAT_INODES @WINDOWS_STAT_INODES@
 
 #endif
-
-/* MSVC 9 defines size_t in <stddef.h>, not in <sys/types.h>.  */
-/* But avoid namespace pollution on glibc systems.  */
-#if ((defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__) \
-    && ! defined __GLIBC__
-# include <stddef.h>
-#endif
-
 #endif /* _@GUARD_PREFIX@_SYS_TYPES_H */
 #endif /* _@GUARD_PREFIX@_SYS_TYPES_H */

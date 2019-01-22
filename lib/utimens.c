@@ -35,22 +35,6 @@
 #include "stat-time.h"
 #include "timespec.h"
 
-/* On native Windows, use SetFileTime; but avoid this when compiling
-   GNU Emacs, which arranges for this in some other way and which
-   defines WIN32_LEAN_AND_MEAN itself.  */
-
-#if ((defined _WIN32 || defined __WIN32__) \
-     && ! defined __CYGWIN__ && ! defined EMACS_CONFIGURATION)
-# define USE_SETFILETIME
-# define WIN32_LEAN_AND_MEAN
-# include <windows.h>
-# if GNULIB_MSVC_NOTHROW
-#  include "msvc-nothrow.h"
-# else
-#  include <io.h>
-# endif
-#endif
-
 /* Avoid recursion with rpl_futimens or rpl_utimensat.  */
 #undef futimens
 #undef utimensat

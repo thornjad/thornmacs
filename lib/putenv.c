@@ -34,11 +34,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#if (defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__
-# define WIN32_LEAN_AND_MEAN
-# include <windows.h>
-#endif
-
 #if _LIBC
 # if HAVE_GNU_LD
 #  define environ __environ
@@ -153,16 +148,6 @@ putenv (char *string)
             *ep = string;
             break;
           }
-# if (defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__
-      if (putenv_result == 0)
-        {
-          /* _putenv propagated "NAME= " into the subprocess environment;
-             fix that by calling SetEnvironmentVariable directly.  */
-          name_x[name_end - string] = 0;
-          putenv_result = SetEnvironmentVariable (name_x, "") ? 0 : -1;
-          putenv_errno = ENOMEM; /* ENOMEM is the only way to fail.  */
-        }
-# endif
       free (name_x);
       __set_errno (putenv_errno);
       return putenv_result;

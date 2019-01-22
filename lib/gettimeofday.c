@@ -24,33 +24,7 @@
 
 #include <time.h>
 
-#if (defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__
-# define WINDOWS_NATIVE
-# include <windows.h>
-#endif
-
 #include "localtime-buffer.h"
-
-#ifdef WINDOWS_NATIVE
-
-/* GetSystemTimePreciseAsFileTime was introduced only in Windows 8.  */
-typedef void (WINAPI * GetSystemTimePreciseAsFileTimeFuncType) (FILETIME *lpTime);
-static GetSystemTimePreciseAsFileTimeFuncType GetSystemTimePreciseAsFileTimeFunc = NULL;
-static BOOL initialized = FALSE;
-
-static void
-initialize (void)
-{
-  HMODULE kernel32 = LoadLibrary ("kernel32.dll");
-  if (kernel32 != NULL)
-    {
-      GetSystemTimePreciseAsFileTimeFunc =
-	(GetSystemTimePreciseAsFileTimeFuncType) GetProcAddress (kernel32, "GetSystemTimePreciseAsFileTime");
-    }
-  initialized = TRUE;
-}
-
-#endif
 
 /* This is a wrapper for gettimeofday.  It is used only on systems
    that lack this function, or whose implementation of this function
@@ -64,46 +38,6 @@ int
 gettimeofday (struct timeval *restrict tv, void *restrict tz)
 {
 #undef gettimeofday
-#ifdef WINDOWS_NATIVE
-
-  /* On native Windows, there are two ways to get the current time:
-     GetSystemTimeAsFileTime
-     <https://msdn.microsoft.com/en-us/library/ms724397.aspx>
-     or
-     GetSystemTimePreciseAsFileTime
-     <https://msdn.microsoft.com/en-us/library/hh706895.aspx>.
-     GetSystemTimeAsFileTime produces values that jump by increments of
-     15.627 milliseconds (!) on average.
-     Whereas GetSystemTimePreciseAsFileTime values usually jump by 1 or 2
-     microseconds.
-     More discussion on this topic:
-     <http://www.windowstimestamp.com/description>.  */
-  FILETIME current_time;
-
-  if (!initialized)
-    initialize ();
-  if (GetSystemTimePreciseAsFileTimeFunc != NULL)
-    GetSystemTimePreciseAsFileTimeFunc (&current_time);
-  else
-    GetSystemTimeAsFileTime (&current_time);
-
-  /* Convert from FILETIME to 'struct timeval'.  */
-  /* FILETIME: <https://msdn.microsoft.com/en-us/library/ms724284.aspx> */
-  ULONGLONG since_1601 =
-    ((ULONGLONG) current_time.dwHighDateTime << 32)
-    | (ULONGLONG) current_time.dwLowDateTime;
-  /* Between 1601-01-01 and 1970-01-01 there were 280 normal years and 89 leap
-     years, in total 134774 days.  */
-  ULONGLONG since_1970 =
-    since_1601 - (ULONGLONG) 134774 * (ULONGLONG) 86400 * (ULONGLONG) 10000000;
-  ULONGLONG microseconds_since_1970 = since_1970 / (ULONGLONG) 10;
-  tv->tv_sec = microseconds_since_1970 / (ULONGLONG) 1000000;
-  tv->tv_usec = microseconds_since_1970 % (ULONGLONG) 1000000;
-
-  return 0;
-
-#else
-
 # if HAVE_GETTIMEOFDAY
 #  if GETTIMEOFDAY_CLOBBERS_LOCALTIME
   /* Save and restore the contents of the buffer used for localtime's
@@ -142,5 +76,4 @@ gettimeofday (struct timeval *restrict tv, void *restrict tz)
   return 0;
 
 # endif
-#endif
 }
