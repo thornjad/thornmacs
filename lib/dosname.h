@@ -20,22 +20,8 @@
 #ifndef _DOSNAME_H
 #define _DOSNAME_H
 
-#if (defined _WIN32 || defined __WIN32__ ||     \
-     defined __CYGWIN__ || defined __EMX__)
-   /* This internal macro assumes ASCII, but all hosts that support drive
-      letters use ASCII.  */
-# define _IS_DRIVE_LETTER(C) (((unsigned int) (C) | ('a' - 'A')) - 'a'  \
-                              <= 'z' - 'a')
-# define FILE_SYSTEM_PREFIX_LEN(Filename) \
-          (_IS_DRIVE_LETTER ((Filename)[0]) && (Filename)[1] == ':' ? 2 : 0)
-# ifndef __CYGWIN__
-#  define FILE_SYSTEM_DRIVE_PREFIX_CAN_BE_RELATIVE 1
-# endif
-# define ISSLASH(C) ((C) == '/' || (C) == '\\')
-#else
 # define FILE_SYSTEM_PREFIX_LEN(Filename) 0
 # define ISSLASH(C) ((C) == '/')
-#endif
 
 #ifndef FILE_SYSTEM_DRIVE_PREFIX_CAN_BE_RELATIVE
 # define FILE_SYSTEM_DRIVE_PREFIX_CAN_BE_RELATIVE 0

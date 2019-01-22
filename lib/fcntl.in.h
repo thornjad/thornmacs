@@ -66,13 +66,6 @@
 # include <unistd.h>
 #endif
 
-/* Native Windows platforms declare open(), creat() in <io.h>.  */
-#if (@GNULIB_OPEN@ || defined GNULIB_POSIXCHECK) \
-    && ((defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__)
-# include <io.h>
-#endif
-
-
 /* The definitions of _GL_FUNCDECL_RPL etc. are copied here.  */
 
 /* The definition of _GL_ARG_NONNULL is copied here.  */

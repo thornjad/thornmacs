@@ -165,11 +165,6 @@ extern int acl_default_nontrivial (acl_t);
 
 # elif HAVE_FACL && defined GETACL /* Solaris, Cygwin, not HP-UX */
 
-/* Set to 0 if a file's mode is stored independently from the ACL.  */
-#  if defined __CYGWIN__ /* Cygwin */
-#   define MODE_INSIDE_ACL 0
-#  endif
-
 /* Return 1 if the given ACL is non-trivial.
    Return 0 if it is trivial, i.e. equivalent to a simple stat() mode.  */
 extern int acl_nontrivial (int count, aclent_t *entries) _GL_ATTRIBUTE_PURE;
