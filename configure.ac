@@ -571,41 +571,49 @@ case "${canonical}" in
   ## Chromium Native Client
   *-nacl )
     opsys=nacl
+    unported=yes
   ;;
 
   ## Cygwin ports
   *-*-cygwin )
     opsys=cygwin
-    AC_MSG_ERROR([Aero does not support Microsoft Windows])
+    unported=yes
   ;;
 
   ## HP 9000 series 700 and 800, running HP/UX
   hppa*-hp-hpux10.2* )
     opsys=hpux10-20
+    unported=yes
   ;;
   hppa*-hp-hpux1[1-9]* )
     opsys=hpux11
     CFLAGS="-D_INCLUDE__STDC_A1_SOURCE $CFLAGS"
+    unported=yes
   ;;
 
   ## IBM machines
   rs6000-ibm-aix4.[23]* )
     opsys=aix4-2
+    unported=yes
   ;;
   powerpc-ibm-aix4.[23]*  )
     opsys=aix4-2
+    unported=yes
   ;;
   rs6000-ibm-aix[56]* )
     opsys=aix4-2
+    unported=yes
   ;;
   powerpc-ibm-aix[5-9]* | powerpc-ibm-aix[1-9][0-9]* )
     opsys=aix4-2
+    unported=yes
   ;;
 
   ## Suns
   *-sun-solaris* \
     | i[3456]86-*-solaris2* | i[3456]86-*-sunos5* \
     | x86_64-*-solaris2*    | x86_64-*-sunos5*)
+    unported=yes
     case "${canonical}" in
       i[3456]86-*-* )   ;;
       amd64-*-*|x86_64-*-*) ;;
@@ -666,7 +674,7 @@ case "${canonical}" in
     case "${canonical}" in
       *-mingw* )
 		opsys=mingw32
-		AC_MSG_ERROR([Aero does not support Microsoft Windows])
+		unported=yes
 		;;
       ## Otherwise, we'll fall through to the generic opsys code at the bottom.
     esac
@@ -685,7 +693,8 @@ esac
 ### above.
 if test x"${opsys}" = x; then
   case "${canonical}" in
-    *-gnu* )				opsys=gnu ;;
+    *-gnu* )
+      opsys=gnu ;;
     * )
       unported=yes
     ;;
@@ -696,9 +705,7 @@ fi
 dnl quotation ends
 
 if test $unported = yes; then
-  AC_MSG_ERROR([Emacs does not support '${canonical}' systems.
-If you think it should, please send a report to ${PACKAGE_BUGREPORT}.
-Check 'etc/MACHINES' for recognized configuration names.])
+  AC_MSG_ERROR([aero does not support '${canonical}' systems. Only Gnu/Linux, BSD and Darwin systems are supported. Check 'etc/MACHINES' for recognized configuration names. If you believe your machine is supported but is tripping this error, please submit an issue at http://gitlab.com/thornjad/aero.])
 fi
 
 #### Choose a compiler.
