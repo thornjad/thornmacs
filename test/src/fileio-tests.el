@@ -62,17 +62,6 @@ Also check that an encoding error can appear in a symlink."
   (should (equal (directory-file-name "/abc/") "/abc"))
   (should (equal (directory-file-name "/abc//") "/abc")))
 
-(ert-deftest fileio-tests--directory-file-name-dos-nt ()
-  "Like fileio-tests--directory-file-name, but for DOS_NT systems."
-  (skip-unless (memq system-type '(ms-dos windows-nt)))
-  (should (equal (directory-file-name "d:/") "d:/"))
-  (should (equal (directory-file-name "d://") "d:/"))
-  (should (equal (directory-file-name "d:///") "d:/"))
-  (should (equal (directory-file-name "d:////") "d:/"))
-  (should (equal (directory-file-name "d:/abc") "d:/abc"))
-  (should (equal (directory-file-name "d:/abc/") "d:/abc"))
-  (should (equal (directory-file-name "d:/abc//") "d:/abc")))
-
 (ert-deftest fileio-tests--file-name-as-directory ()
   (should (equal (file-name-as-directory "") "./"))
   (should (equal (file-name-as-directory "/") "/"))
@@ -82,18 +71,3 @@ Also check that an encoding error can appear in a symlink."
   (should (equal (file-name-as-directory "/abc") "/abc/"))
   (should (equal (file-name-as-directory "/abc/") "/abc/"))
   (should (equal (file-name-as-directory "/abc//") "/abc//")))
-
-(ert-deftest fileio-tests--file-name-as-directory-dos-nt ()
-  "Like fileio-tests--file-name-as-directory, but for DOS_NT systems."
-  (skip-unless (memq system-type '(ms-dos windows-nt)))
-  (should (equal (file-name-as-directory "d:/") "d:/"))
-  (should (equal (file-name-as-directory "d:\\") "d:/"))
-  (should (equal (file-name-as-directory "d://") "d://"))
-  (should (equal (file-name-as-directory "d:///") "d:///"))
-  (should (equal (file-name-as-directory "d:////") "d:////"))
-  (should (equal (file-name-as-directory "d:\\\\\\\\") "d:////"))
-  (should (equal (file-name-as-directory "d:/abc") "d:/abc/"))
-  (should (equal (file-name-as-directory "D:\\abc") "d:/abc/"))
-  (should (equal (file-name-as-directory "d:/abc/") "d:/abc/"))
-  (should (equal (file-name-as-directory "D:\\abc/") "d:/abc/"))
-  (should (equal (file-name-as-directory "D:/abc//") "d:/abc//")))

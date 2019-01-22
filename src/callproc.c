@@ -188,11 +188,7 @@ call_process_cleanup (Lisp_Object buffer)
     }
 }
 
-#ifdef DOS_NT
-static mode_t const default_output_mode = S_IREAD | S_IWRITE;
-#else
 static mode_t const default_output_mode = 0666;
-#endif
 
 /* Like Fcall_process (NARGS, ARGS), except use FILEFD as the input file.
 
@@ -771,17 +767,8 @@ create_temp_file (ptrdiff_t nargs, Lisp_Object *args,
   else
     {
       char *outf;
-#ifndef DOS_NT
       outf = getenv ("TMPDIR");
       tmpdir = build_string (outf ? outf : "/tmp/");
-#else /* DOS_NT */
-      if ((outf = egetenv ("TMPDIR"))
-	  || (outf = egetenv ("TMP"))
-	  || (outf = egetenv ("TEMP")))
-	tmpdir = build_string (outf);
-      else
-	tmpdir = Ffile_name_as_directory (build_string ("c:/temp"));
-#endif
     }
 
   {
@@ -962,8 +949,6 @@ add_env (char **env, char **new_env, char *string)
   return new_env;
 }
 
-#ifndef DOS_NT
-
 /* 'exec' failed inside a child running NAME, with error number ERR.
    Possibly a vforked child needed to allocate a large vector on the
    stack; such a child cannot fall back on malloc because that might
@@ -982,18 +967,6 @@ exec_failed (char const *name, int err)
   emacs_perror (name);
   _exit (err == ENOENT ? EXIT_ENOENT : EXIT_CANNOT_INVOKE);
 }
-
-#else
-
-/* Do nothing.  There is no need to fail, as DOS_NT platforms do not
-   fork and exec, and handle alloca exhaustion in a different way.  */
-
-static void
-exec_failed (char const *name, int err)
-{
-}
-
-#endif
 
 /* This is the last thing run in a newly forked inferior
    either synchronous or asynchronous.
@@ -1038,7 +1011,6 @@ child_setup (int in, int out, int err, char **new_argv, bool set_pgrp,
     memcpy (pwd_var, "PWD=", 4);
     lispstpcpy (temp, current_dir);
 
-#ifndef DOS_NT
     /* We can't signal an Elisp error here; we're in a vfork.  Since
        the callers check the current directory before forking, this
        should only return an error if the directory's permissions
@@ -1046,14 +1018,6 @@ child_setup (int in, int out, int err, char **new_argv, bool set_pgrp,
        at least check.  */
     if (chdir (temp) < 0)
       _exit (EXIT_CANCELED);
-#else /* DOS_NT */
-    /* Get past the drive letter, so that d:/ is left alone.  */
-    if (i > 2 && IS_DEVICE_SEP (temp[1]) && IS_DIRECTORY_SEP (temp[2]))
-      {
-	temp += 2;
-	i -= 2;
-      }
-#endif /* DOS_NT */
 
     /* Strip trailing slashes for PWD, but leave "/" and "//" alone.  */
     while (i > 2 && IS_DIRECTORY_SEP (temp[i - 1]))
@@ -1406,11 +1370,7 @@ set_initial_environment (void)
 void
 syms_of_callproc (void)
 {
-#ifndef DOS_NT
   Vtemp_file_name_pattern = build_string ("emacsXXXXXX");
-#else  /* DOS_NT */
-  Vtemp_file_name_pattern = build_string ("emXXXXXX");
-#endif
   staticpro (&Vtemp_file_name_pattern);
 
   DEFVAR_LISP ("shell-file-name", Vshell_file_name,

@@ -1786,17 +1786,6 @@ int poll_suppress_count;
 
 static struct atimer *poll_timer;
 
-#if defined CYGWIN || defined DOS_NT
-/* Poll for input, so that we catch a C-g if it comes in.  */
-void
-poll_for_input_1 (void)
-{
-  if (! input_blocked_p ()
-      && !waiting_for_input)
-    gobble_input ();
-}
-#endif
-
 /* Timer callback function for poll_timer.  TIMER is equal to
    poll_timer.  */
 
@@ -1846,23 +1835,6 @@ start_polling (void)
     }
 #endif
 }
-
-#if defined CYGWIN || defined DOS_NT
-/* True if we are using polling to handle input asynchronously.  */
-
-bool
-input_polling_used (void)
-{
-# ifdef POLL_FOR_INPUT
-  /* XXX This condition was (read_socket_hook && !interrupt_input),
-     but read_socket_hook is not global anymore.  Let's pretend that
-     it's always set.  */
-  return !interrupt_input;
-# else
-  return false;
-# endif
-}
-#endif
 
 /* Turn off polling.  */
 
@@ -10061,7 +10033,7 @@ quit_throw_to_read_char (bool from_signal)
 
   sys_longjmp (getcjmp, 1);
 }
-
+
 DEFUN ("set-input-interrupt-mode", Fset_input_interrupt_mode,
        Sset_input_interrupt_mode, 1, 1, 0,
        doc: /* Set interrupt mode of reading keyboard input.
@@ -10092,14 +10064,10 @@ See also `current-input-mode'.  */)
 #ifdef POLL_FOR_INPUT
       stop_polling ();
 #endif
-#ifndef DOS_NT
       /* this causes startup screen to be restored and messes with the mouse */
       reset_all_sys_modes ();
       interrupt_input = new_interrupt_input;
       init_all_sys_modes ();
-#else
-      interrupt_input = new_interrupt_input;
-#endif
 
 #ifdef POLL_FOR_INPUT
       poll_suppress_count = 1;
@@ -10129,16 +10097,12 @@ See also `current-input-mode'.  */)
 
   if (tty->flow_control != !NILP (flow))
     {
-#ifndef DOS_NT
       /* This causes startup screen to be restored and messes with the mouse.  */
       reset_sys_modes (tty);
-#endif
 
       tty->flow_control = !NILP (flow);
 
-#ifndef DOS_NT
       init_sys_modes (tty);
-#endif
     }
   return Qnil;
 }
@@ -10180,16 +10144,12 @@ See also `current-input-mode'.  */)
 
   if (tty->meta_key != new_meta)
     {
-#ifndef DOS_NT
       /* this causes startup screen to be restored and messes with the mouse */
       reset_sys_modes (tty);
-#endif
 
       tty->meta_key = new_meta;
 
-#ifndef DOS_NT
       init_sys_modes (tty);
-#endif
     }
   return Qnil;
 }
@@ -10214,17 +10174,13 @@ See also `current-input-mode'.  */)
   if (NILP (quit) || !INTEGERP (quit) || XINT (quit) < 0 || XINT (quit) > 0400)
     error ("QUIT must be an ASCII character");
 
-#ifndef DOS_NT
   /* this causes startup screen to be restored and messes with the mouse */
   reset_sys_modes (tty);
-#endif
 
   /* Don't let this value be out of range.  */
   quit_char = XINT (quit) & (tty->meta_key == 0 ? 0177 : 0377);
 
-#ifndef DOS_NT
   init_sys_modes (tty);
-#endif
 
   return Qnil;
 }
@@ -10411,11 +10367,9 @@ init_keyboard (void)
       struct sigaction action;
       emacs_sigaction_init (&action, deliver_interrupt_signal);
       sigaction (SIGINT, &action, 0);
-#ifndef DOS_NT
       /* For systems with SysV TERMIO, C-g is set up for both SIGINT and
 	 SIGQUIT and we can't tell which one it will give us.  */
       sigaction (SIGQUIT, &action, 0);
-#endif /* not DOS_NT */
     }
 #ifdef USABLE_SIGIO
   if (!noninteractive)

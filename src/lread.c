@@ -1194,22 +1194,6 @@ Return t if the file exists and loads successfully.  */)
 	handler = Ffind_file_name_handler (found, Qload);
       if (! NILP (handler))
 	return call5 (handler, Qload, found, noerror, nomessage, Qt);
-#ifdef DOS_NT
-      /* Tramp has to deal with semi-broken packages that prepend
-	 drive letters to remote files.  For that reason, Tramp
-	 catches file operations that test for file existence, which
-	 makes openp think X:/foo.elc files are remote.  However,
-	 Tramp does not catch `load' operations for such files, so we
-	 end up with a nil as the `load' handler above.  If we would
-	 continue with fd = -2, we will behave wrongly, and in
-	 particular try reading a .elc file in the "rt" mode instead
-	 of "rb".  See bug #9311 for the results.  To work around
-	 this, we try to open the file locally, and go with that if it
-	 succeeds.  */
-      fd = emacs_open (SSDATA (ENCODE_FILE (found)), O_RDONLY, 0);
-      if (fd == -1)
-	fd = -2;
-#endif
     }
 
   if (0 <= fd)

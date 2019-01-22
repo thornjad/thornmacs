@@ -352,7 +352,7 @@ stuff_char (char c)
 }
 
 #endif /* SIGTSTP */
-
+
 void
 init_baud_rate (int fd)
 {
@@ -362,15 +362,11 @@ init_baud_rate (int fd)
     emacs_ospeed = 0;
   else
     {
-#ifdef DOS_NT
-    emacs_ospeed = 15;
-#else  /* not DOS_NT */
       struct termios sg;
 
       sg.c_cflag = B9600;
       tcgetattr (fd, &sg);
       emacs_ospeed = cfgetospeed (&sg);
-#endif /* not DOS_NT */
     }
 
   baud_rate = (emacs_ospeed < ARRAYELTS (baud_convert)
@@ -379,7 +375,6 @@ init_baud_rate (int fd)
     baud_rate = 1200;
 }
 
-
 
 /* Wait for the subprocess with process id CHILD to terminate or change status.
    CHILD must be a child process that has not been reaped.
@@ -549,7 +544,7 @@ child_setup_tty (int out)
   emacs_set_tty (out, &s, 0);
 }
 
-
+
 /* Record a signal code and the action for it.  */
 struct save_signal
 {
@@ -557,9 +552,6 @@ struct save_signal
   struct sigaction action;
 };
 
-#ifdef DOS_NT
-static void save_signal_handlers (struct save_signal *);
-#endif
 static void restore_signal_handlers (struct save_signal *);
 
 /* Suspend the Emacs process; give terminal to its superior.  */
@@ -567,15 +559,7 @@ static void restore_signal_handlers (struct save_signal *);
 void
 sys_suspend (void)
 {
-#ifndef DOS_NT
   kill (0, SIGTSTP);
-#else
-/* On a system where suspending is not implemented,
-   instead fork a subshell and let it talk directly to the terminal
-   while we wait.  */
-  sys_subshell ();
-
-#endif
 }
 
 /* Fork a subshell.  */
@@ -583,24 +567,16 @@ sys_suspend (void)
 void
 sys_subshell (void)
 {
-#ifdef DOS_NT	/* Demacs 1.1.2 91/10/20 Manabu Higashida */
-  int st;
-  char oldwd[MAX_UTF8_PATH];
-#endif
   int status;
   pid_t pid;
   struct save_signal saved_handlers[5];
   char *str = SSDATA (encode_current_directory ());
 
-#ifdef DOS_NT
-  pid = 0;
-#else
   {
     char *volatile str_volatile = str;
     pid = vfork ();
     str = str_volatile;
   }
-#endif
 
   if (pid < 0)
     error ("Can't spawn subshell");
@@ -615,19 +591,10 @@ sys_subshell (void)
   saved_handlers[3].code = 0;
 #endif
 
-#ifdef DOS_NT
-  save_signal_handlers (saved_handlers);
-#endif
-
   if (pid == 0)
     {
       const char *sh = 0;
 
-#ifdef DOS_NT    /* MW, Aug 1993 */
-      getcwd (oldwd, sizeof oldwd);
-      if (sh == 0)
-	sh = egetenv ("SUSPEND");	/* KFS, 1994-12-14 */
-#endif
       if (sh == 0)
 	sh = egetenv ("SHELL");
       if (sh == 0)
@@ -636,10 +603,8 @@ sys_subshell (void)
       /* Use our buffer's default directory for the subshell.  */
       if (chdir (str) != 0)
 	{
-#ifndef DOS_NT
 	  emacs_perror (str);
 	  _exit (EXIT_CANCELED);
-#endif
 	}
 
       execlp (sh, sh, (char *) 0);
@@ -647,25 +612,9 @@ sys_subshell (void)
       _exit (errno == ENOENT ? EXIT_ENOENT : EXIT_CANNOT_INVOKE);
     }
 
-#ifndef DOS_NT
   wait_for_termination (pid, &status, 0);
-#endif
   restore_signal_handlers (saved_handlers);
 }
-
-#ifdef DOS_NT
-static void
-save_signal_handlers (struct save_signal *saved_handlers)
-{
-  while (saved_handlers->code)
-    {
-      struct sigaction action;
-      emacs_sigaction_init (&action, SIG_IGN);
-      sigaction (saved_handlers->code, &action, &saved_handlers->action);
-      saved_handlers++;
-    }
-}
-#endif
 
 static void
 restore_signal_handlers (struct save_signal *saved_handlers)
@@ -676,7 +625,7 @@ restore_signal_handlers (struct save_signal *saved_handlers)
       saved_handlers++;
     }
 }
-
+
 #ifdef USABLE_SIGIO
 static int old_fcntl_flags[FD_SETSIZE];
 #endif
@@ -691,7 +640,6 @@ init_sigio (int fd)
 #endif
 }
 
-#ifndef DOS_NT
 static void
 reset_sigio (int fd)
 {
@@ -699,7 +647,6 @@ reset_sigio (int fd)
   fcntl (fd, F_SETFL, old_fcntl_flags[fd]);
 #endif
 }
-#endif
 
 void
 request_sigio (void)
@@ -966,9 +913,7 @@ void
 init_sys_modes (struct tty_display_info *tty_out)
 {
   struct emacs_tty tty;
-#ifndef DOS_NT
   Lisp_Object terminal;
-#endif
 
   Vtty_erase_char = Qnil;
 
@@ -987,7 +932,6 @@ init_sys_modes (struct tty_display_info *tty_out)
 
   tty = *tty_out->old_tty;
 
-#if !defined (DOS_NT)
   XSETINT (Vtty_erase_char, tty.main.c_cc[VERASE]);
 
   tty.main.c_iflag |= (IGNBRK);	/* Ignore break condition */
@@ -1123,7 +1067,6 @@ init_sys_modes (struct tty_display_info *tty_out)
   tty.main.c_iflag &= ~IGNBRK;
   tty.main.c_iflag &= ~BRKINT;
 #endif
-#endif /* not DOS_NT */
 
   emacs_set_tty (fileno (tty_out->input), &tty, 0);
 
@@ -1137,10 +1080,8 @@ init_sys_modes (struct tty_display_info *tty_out)
   if (!tty_out->flow_control) ioctl (fileno (tty_out->input), TIOCSTART, 0);
 #endif
 
-#if !defined (DOS_NT)
 #ifdef TCOON
   if (!tty_out->flow_control) tcflow (fileno (tty_out->input), TCOON);
-#endif
 #endif
 
 #ifdef F_GETOWN
@@ -1215,15 +1156,11 @@ tabs_safe_p (int fd)
   struct emacs_tty etty;
 
   emacs_get_tty (fd, &etty);
-#ifndef DOS_NT
 #ifdef TABDLY
   return ((etty.main.c_oflag & TABDLY) != TAB3);
 #else /* not TABDLY */
   return 1;
 #endif /* not TABDLY */
-#else /* DOS_NT */
-  return 0;
-#endif /* DOS_NT */
 }
 
 /* Discard echoing.  */
@@ -1238,7 +1175,7 @@ suppress_echo_on_tty (int fd)
   etty.main.c_lflag &= ~ECHO;	/* Disable echoing */
   emacs_set_tty (fd, &etty, 0);
 }
-
+
 /* Get terminal size from system.
    Store number of lines into *HEIGHTP and width into *WIDTHP.
    We store 0 if there's no valid information.  */
@@ -1367,7 +1304,6 @@ reset_sys_modes (struct tty_display_info *tty_out)
   while (fdatasync (fileno (tty_out->output)) != 0 && errno == EINTR)
     continue;
 
-#ifndef DOS_NT
 #ifdef F_SETOWN
   if (interrupt_input)
     {
@@ -1378,7 +1314,6 @@ reset_sys_modes (struct tty_display_info *tty_out)
 #endif /* F_SETOWN */
   fcntl (fileno (tty_out->input), F_SETFL,
          fcntl (fileno (tty_out->input), F_GETFL, 0) & ~O_NONBLOCK);
-#endif
 
   if (tty_out->old_tty)
     while (emacs_set_tty (fileno (tty_out->input),
@@ -1387,7 +1322,7 @@ reset_sys_modes (struct tty_display_info *tty_out)
 
   widen_foreground_group (fileno (tty_out->input));
 }
-
+
 #ifdef HAVE_PTYS
 
 /* Set up the proper status flags for use of a pty.  */
@@ -2607,7 +2542,7 @@ renameat_noreplace (int srcfd, char const *src, int dstfd, char const *dst)
   return -1;
 #endif
 }
-
+
 /* Like strsignal, except async-signal-safe, and this function typically
    returns a string in the C locale rather than the current locale.  */
 char const *
@@ -2622,8 +2557,7 @@ safe_strsignal (int code)
 
   return signame;
 }
-
-#ifndef DOS_NT
+
 /* For make-serial-process  */
 int
 serial_open (Lisp_Object port)
@@ -2822,8 +2756,7 @@ serial_configure (struct Lisp_Process *p,
   childp2 = Fplist_put (childp2, QCsummary, build_string (summary));
   pset_childp (p, childp2);
 }
-#endif /* not DOS_NT  */
-
+
 /* System depended enumeration of and access to system processes a-la ps(1).  */
 
 #ifdef HAVE_PROCFS

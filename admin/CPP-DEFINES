@@ -9,12 +9,8 @@ documented in config.in, and this file would not be necessary.
 
 AIX
 _AIX
-CYGWIN		Compiling the Cygwin port.
-__CYGWIN__	Ditto
 GNU_LINUX
 HPUX
-DOS_NT		Compiling for either the MS-DOS or native MS-Windows port.
-WINDOWSNT	Compiling the native MS-Windows (W32) port.
 __MINGW32__	Compiling the W32 port with the MinGW or MinGW-w64 ports of GCC.
 MINGW_W64	Compiling the W32 port with the MinGW-w64 port of GCC.
 DARWIN_OS	Compiling on macOS or pure Darwin (and using s/darwin.h).

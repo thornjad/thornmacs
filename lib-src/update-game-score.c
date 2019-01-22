@@ -437,10 +437,8 @@ write_scores (const char *filename, mode_t mode,
   fd = rust_make_temp (tempfile, 0);
   if (fd < 0)
     return -1;
-#ifndef DOS_NT
   if (fchmod (fd, mode) != 0)
     return -1;
-#endif
   f = fdopen (fd, "w");
   if (! f)
     return -1;

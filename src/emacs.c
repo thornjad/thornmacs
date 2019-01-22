@@ -896,7 +896,6 @@ main (int argc, char **argv)
 
   if (daemon_type > 0)
     {
-#ifndef DOS_NT
       if (daemon_type == 2)
         {
           /* Start as a background daemon: fork a new child process which
@@ -1498,7 +1497,7 @@ Using an Emacs configured with --with-x-toolkit=lucid does not have this problem
   /* NOTREACHED */
   return 0;
 }
-
+
 /* Sort the args so we can find the most important ones
    at the beginning of argv.  */
 
@@ -1777,7 +1776,7 @@ sort_args (int argc, char **argv)
   xfree (new);
   xfree (priority);
 }
-
+
 DEFUN ("kill-emacs", Fkill_emacs, Skill_emacs, 0, 1, "P",
        doc: /* Exit the Emacs job and kill it.
 If ARG is an integer, return ARG as the exit program code.
@@ -1854,7 +1853,6 @@ shut_down_emacs (int sig, Lisp_Object stuff)
   Vinhibit_redisplay = Qt;
 
   /* If we are controlling the terminal, reset terminal modes.  */
-#ifndef DOS_NT
   {
     pid_t pgrp = getpgrp ();
     pid_t tpgrp = tcgetpgrp (0);
@@ -1872,10 +1870,6 @@ shut_down_emacs (int sig, Lisp_Object stuff)
 	  }
       }
   }
-#else
-  fflush (stdout);
-  reset_all_sys_modes ();
-#endif
 
   stuff_buffered_input (stuff);
 
@@ -1907,7 +1901,6 @@ shut_down_emacs (int sig, Lisp_Object stuff)
 }
 
 
-
 #ifndef CANNOT_DUMP
 
 #include "unexec.h"
@@ -2008,7 +2001,7 @@ You must run Emacs in batch mode in order to dump it.  */)
 }
 
 #endif /* not CANNOT_DUMP */
-
+
 #if HAVE_SETLOCALE
 /* Recover from setlocale (LC_ALL, "").  */
 void
@@ -2061,7 +2054,6 @@ emacs_strerror (int error_number)
   synchronize_system_messages_locale ();
   return strerror (error_number);
 }
-
 
 Lisp_Object
 decode_env_path (const char *evarname, const char *defalt, bool empty)

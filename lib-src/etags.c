@@ -1397,9 +1397,6 @@ get_compressor_from_suffix (char *file, char **extptr)
 {
   compressor *compr;
   char *slash, *suffix;
-
-  /* File has been processed by canonicalize_filename,
-     so we don't need to consider backslashes on DOS_NT.  */
   slash = strrchr (file, '/');
   suffix = strrchr (file, '.');
   if (suffix == NULL || suffix < slash)
@@ -1481,10 +1478,6 @@ get_language_from_filename (char *file, int case_sensitive)
   slash = strrchr (file, '/');
   if (slash != NULL)
     file = slash + 1;
-#ifdef DOS_NT
-  else if (file[0] && file[1] == ':')
-    file += 2;
-#endif
   for (lang = lang_names; lang->name != NULL; lang++)
     if (lang->filenames != NULL)
       for (name = lang->filenames; *name != NULL; name++)
@@ -1594,13 +1587,8 @@ process_file_name (char *file, language *lang)
 	inf = NULL;
       else
 	{
-#if defined (DOS_NT)
-	  char *cmd1 = concat (compr->command, " \"", real_name);
-	  char *cmd = concat (cmd1, "\" > ", tmp_name);
-#else
 	  char *cmd1 = concat (compr->command, " '", real_name);
 	  char *cmd = concat (cmd1, "' > ", tmp_name);
-#endif
 	  free (cmd1);
 	  int tmp_errno;
 	  if (system (cmd) == -1)
@@ -7021,22 +7009,10 @@ etags_mktmp (void)
   const char *tmpdir = getenv ("TMPDIR");
   const char *slash = "/";
 
-#if defined (DOS_NT)
-  if (!tmpdir)
-    tmpdir = getenv ("TEMP");
-  if (!tmpdir)
-    tmpdir = getenv ("TMP");
-  if (!tmpdir)
-    tmpdir = ".";
-  if (tmpdir[strlen (tmpdir) - 1] == '/'
-      || tmpdir[strlen (tmpdir) - 1] == '\\')
-    slash = "";
-#else
   if (!tmpdir)
     tmpdir = "/tmp";
   if (tmpdir[strlen (tmpdir) - 1] == '/')
     slash = "";
-#endif
 
   char *templt = concat (tmpdir, slash, "etXXXXXX");
   int fd = rust_make_temp (templt, O_CLOEXEC);
@@ -7047,18 +7023,6 @@ etags_mktmp (void)
       errno = temp_errno;
       templt = NULL;
     }
-#if defined (DOS_NT)
-  else
-    {
-      /* The file name will be used in shell redirection, so it needs to have
-	 DOS-style backslashes, or else the Windows shell will barf.  */
-      char *p;
-      for (p = templt; *p; p++)
-	if (*p == '/')
-	  *p = '\\';
-    }
-#endif
-
   return templt;
 }
 
@@ -7077,10 +7041,6 @@ relative_filename (char *file, char *dir)
   while (*fp++ == *dp++)
     continue;
   fp--, dp--;			/* back to the first differing char */
-#ifdef DOS_NT
-  if (fp == afn && afn[0] != '/') /* cannot build a relative name */
-    return afn;
-#endif
   do				/* look at the equal chars until '/' */
     fp--, dp--;
   while (*fp != '/');
@@ -7110,12 +7070,6 @@ absolute_filename (char *file, char *dir)
 
   if (filename_is_absolute (file))
     res = savestr (file);
-#ifdef DOS_NT
-  /* We don't support non-absolute file names with a drive
-     letter, like `d:NAME' (it's too much hassle).  */
-  else if (file[1] == ':')
-    fatal ("%s: relative file names with drive letters not supported", file);
-#endif
   else
     res = concat (dir, file, "");
 
@@ -7134,13 +7088,6 @@ absolute_filename (char *file, char *dir)
 	      while (cp >= res && !filename_is_absolute (cp));
 	      if (cp < res)
 		cp = slashp;	/* the absolute name begins with "/.." */
-#ifdef DOS_NT
-	      /* Under MSDOS and NT we get `d:/NAME' as absolute
-		 file name, so the luser could say `d:/../NAME'.
-		 We silently treat this as `d:/NAME'.  */
-	      else if (cp[0] != '/')
-		cp = slashp;
-#endif
               memmove (cp, slashp + 3, strlen (slashp + 2));
 	      slashp = cp;
 	      continue;
@@ -7190,9 +7137,6 @@ static bool
 filename_is_absolute (char *fn)
 {
   return (fn[0] == '/'
-#ifdef DOS_NT
-	  || (c_isalpha (fn[0]) && fn[1] == ':' && fn[2] == '/')
-#endif
 	  );
 }
 
@@ -7202,25 +7146,6 @@ static void
 canonicalize_filename (register char *fn)
 {
   register char* cp;
-
-#ifdef DOS_NT
-  /* Canonicalize drive letter case.  */
-  if (c_isupper (fn[0]) && fn[1] == ':')
-    fn[0] = c_tolower (fn[0]);
-
-  /* Collapse multiple forward- and back-slashes into a single forward
-     slash. */
-  for (cp = fn; *cp != '\0'; cp++, fn++)
-    if (*cp == '/' || *cp == '\\')
-      {
-	*fn = '/';
-	while (cp[1] == '/' || cp[1] == '\\')
-	  cp++;
-      }
-    else
-      *fn = *cp;
-
-#else  /* !DOS_NT */
 
   /* Collapse multiple slashes into a single slash. */
   for (cp = fn; *cp != '\0'; cp++, fn++)
@@ -7233,12 +7158,9 @@ canonicalize_filename (register char *fn)
     else
       *fn = *cp;
 
-#endif	/* !DOS_NT */
-
   *fn = '\0';
 }
 
-
 /* Initialize a linebuffer for use. */
 static void
 linebuffer_init (linebuffer *lbp)
