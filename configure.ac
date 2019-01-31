@@ -1902,7 +1902,6 @@ CLIENTW=
 EMACS_MANIFEST=
 
 FIRSTFILE_OBJ=
-NTDIR=
 LIBS_ECLIENT=
 LIB_WSOCK32=
 NTLIB=
@@ -1914,7 +1913,6 @@ AC_SUBST(EMACS_MANIFEST)
 AC_SUBST(CLIENTRES)
 AC_SUBST(CLIENTW)
 AC_SUBST(FIRSTFILE_OBJ)
-AC_SUBST(NTDIR)
 AC_SUBST(CM_OBJ)
 AC_SUBST(LIBS_ECLIENT)
 AC_SUBST(LIB_WSOCK32)
@@ -3589,7 +3587,7 @@ For example, a libncurses-dev(el) or similar package.])],
   [*], [LIBS_TERMCAP=])
 
 ## Use termcap instead of terminfo?
-## Only true for: freebsd < 40000, ms-w32, netbsd < 599002500.
+## Only true for: freebsd < 40000, netbsd < 599002500.
 TERMINFO=yes
 ## FIXME?  In the cases below where we unconditionally set
 ## LIBS_TERMCAP="-lncurses", this overrides LIBS_TERMCAP = -ltinfo,

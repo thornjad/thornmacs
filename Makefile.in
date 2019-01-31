@@ -97,9 +97,6 @@ version=@version@
 ### for, like 'x86_64-unknown-linux-gnu' or 'powerpc-ibm-aix7.1.2.0'.
 configuration=@configuration@
 
-### The nt/ subdirectory gets built only for MinGW
-NTDIR=@NTDIR@
-
 # 'make' verbosity.
 AM_DEFAULT_VERBOSITY = @AM_DEFAULT_VERBOSITY@
 
@@ -317,7 +314,7 @@ EMACS = ${EMACS_NAME}${EXEEXT}
 EMACSFULL = `echo remacs-${version} | sed '$(TRANSFORM)'`${EXEEXT}
 
 # Subdirectories to make recursively.
-SUBDIR = $(NTDIR) lib lib-src src lisp
+SUBDIR = lib lib-src src lisp
 
 # The subdir makefiles created by config.status.
 SUBDIR_MAKEFILES_IN = @SUBDIR_MAKEFILES_IN@
@@ -337,7 +334,7 @@ COPYDESTS = "$(DESTDIR)${etcdir}" "$(DESTDIR)${lispdir}"
 
 all: ${SUBDIR} info
 
-.PHONY: all ${SUBDIR} blessmail epaths-force epaths-force-w32 etc-emacsver
+.PHONY: all ${SUBDIR} blessmail epaths-force etc-emacsver
 
 # If configure were to just generate emacsver.tex from emacsver.tex.in
 # in the normal way, the timestamp of emacsver.tex would always be
@@ -382,29 +379,7 @@ epaths-force:
 	  -e 's;\(#.*PATH_DOC\).*$$;\1 "${etcdocdir}";') &&		\
 	${srcdir}/build-aux/move-if-change epaths.h.$$$$ src/epaths.h
 
-# The w32 build needs a slightly different editing, and it uses
-# nt/epaths.nt as the template.
-#
-# Use the value of ${locallisppath} supplied by 'configure',
-# to support the --enable-locallisppath argument.
-#
-# In this case, the paths written to 'src/epaths.h' must be in native
-# MS-Windows format (e.g. 'c:/foo/bar'), because temacs is a MinGW
-# program that doesn't support MSYS-style paths (e.g. '/c/foo/bar' or
-# '/foo/bar').
-epaths-force-w32:
-	@(w32srcdir=`${srcdir}/build-aux/msys-to-w32 "${abs_srcdir}"`; \
-	  w32prefix=`${srcdir}/build-aux/msys-to-w32 "${prefix}"`; \
-	  w32locallisppath=`${srcdir}/build-aux/msys-to-w32 "${locallisppath}"` ; \
-	  w32locallisppath=$${w32locallisppath//$${w32prefix}/"%emacs_dir%"} ; \
-	  sed < ${srcdir}/nt/epaths.nt > epaths.h.$$$$		\
-	  -e 's;\(#.*PATH_SITELOADSEARCH\).*$$;\1 "'"$${w32locallisppath//;/\\;}"'";' \
-	  -e '/^.*#/s/@VER@/${version}/g' 			\
-	  -e '/^.*#/s/@CFG@/${configuration}/g' 		\
-	  -e "/^.*#/s|@SRC@|$${w32srcdir}|g") &&		\
-	${srcdir}/build-aux/move-if-change epaths.h.$$$$ src/epaths.h
-
-lib-src src: $(NTDIR) lib
+lib-src src: lib
 
 src: lib-src
 
@@ -466,14 +441,14 @@ $(srcdir)/configure: $(srcdir)/configure.ac $(srcdir)/m4/*.m4
 # ==================== Installation ====================
 
 .PHONY: install install-arch-dep install-arch-indep install-etcdoc install-info
-.PHONY: install-man install-etc install-strip install-$(NTDIR)
-.PHONY: uninstall uninstall-$(NTDIR)
+.PHONY: install-man install-etc install-strip
+.PHONY: uninstall
 
 ## If we let lib-src do its own installation, that means we
 ## don't have to duplicate the list of utilities to install in
 ## this Makefile as well.
 
-install: all install-arch-indep install-etcdoc install-arch-dep install-$(NTDIR) blessmail
+install: all install-arch-indep install-etcdoc install-arch-dep blessmail
 	@true
 
 ## Ensure that $subdir contains a subdirs.el file.
@@ -494,7 +469,7 @@ write_subdir=if [ -f "$${subdir}/subdirs.el" ]; \
 ### Install the executables that were compiled specifically for this machine.
 ### We do install-arch-indep first because the executable needs the
 ### Lisp files and DOC file to work properly.
-install-arch-dep: src install-arch-indep install-etcdoc install-$(NTDIR)
+install-arch-dep: src install-arch-indep install-etcdoc
 	umask 022; ${MKDIR_P} "$(DESTDIR)${bindir}"
 	$(MAKE) -C lib-src install
 ifeq (${ns_self_contained},no)
@@ -508,12 +483,6 @@ else
 	subdir=${ns_appresdir}/site-lisp && ${write_subdir}
 	rm -rf ${ns_appresdir}/share
 endif
-
-### Windows-specific install target for installing programs produced
-### in nt/, and its Posix do-nothing shadow.
-install-:
-install-nt:
-	$(MAKE) -C $(NTDIR) install
 
 ## In the share directory, we are deleting:
 ## applications (with emacs.desktop, also found in etc/)
@@ -751,7 +720,7 @@ install-strip:
 ### create (but not the noninstalled files such as 'make all' would create).
 ###
 ### Don't delete the lisp and etc directories if they're in the source tree.
-uninstall: uninstall-$(NTDIR) uninstall-doc
+uninstall: uninstall-doc
 	$(MAKE) -C lib-src uninstall
 	-unset CDPATH; \
 	for dir in "$(DESTDIR)${lispdir}" "$(DESTDIR)${etcdir}" ; do 	\
@@ -800,12 +769,6 @@ uninstall: uninstall-$(NTDIR) uninstall-doc
 	  [ -s "$${file}" ] || rm -f "$$file"; \
 	done
   endif
-
-### Windows-specific uninstall target for removing programs produced
-### in nt/, and its Posix do-nothing shadow.
-uninstall-:
-uninstall-nt:
-	$(MAKE) -C $(NTDIR) uninstall
 
 # ==================== Cleaning up and miscellanea ====================
 
@@ -929,7 +892,7 @@ maintainer-clean: bootstrap-clean $(maintainer_clean_dirs:=_maintainer-clean)
 ### it deletes backup and autosave files too.
 ### Note that we abuse this in some subdirectories (eg leim),
 ### to delete some generated files that are slow to rebuild.
-extraclean_dirs = ${NTDIR} lib-src src leim \
+extraclean_dirs = lib-src src leim \
   admin/charsets admin/grammars admin/unidata
 
 $(foreach dir,$(extraclean_dirs),$(eval $(call submake_template,$(dir),extraclean)))
