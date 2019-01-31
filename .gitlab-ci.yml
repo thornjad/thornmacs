@@ -28,7 +28,7 @@ image: debian:stretch
 
 before_script:
   - apt update -qq
-  - DEBIAN_FRONTEND=noninteractive apt install --no-install-recommends -y -qq -o=Dpkg::Use-Pty=0 libc-dev gcc make autoconf automake libncurses-dev gnutls-dev build-essential clang libclang-dev texinfo libjpeg-dev libtiff-dev libgif-dev libxpm-dev libgtk-3-dev libgnutls28-dev libxml2-dev libxt-dev
+  - DEBIAN_FRONTEND=noninteractive apt install --no-install-recommends -y -qq -o=Dpkg::Use-Pty=0 libc-dev gcc make autoconf automake libncurses-dev gnutls-dev build-essential clang libclang-dev texinfo libjpeg-dev libtiff-dev libgif-dev libxpm-dev libgtk-3-dev libgnutls28-dev libxml2-dev libxt-dev curl
   - curl https://sh.rustup.rs -sSf | sh
   - rustup install $(cat rust-toolchain)
 
