@@ -40,6 +40,6 @@ test:
   script:
     - rustc --version && cargo --version
     - ./autogen.sh
-    - RUST_BACKTRACE=1 RUSTFLAGS="-Dwarnings --features 'strict'" WERROR_CFLAGS='-Werror -Wno-error=deprecated-declarations' ./configure --without-makeinfo --enable-rust-debug --with-x=no --with-ns=no --without-gconf --without-gsettings
+    - RUST_BACKTRACE=1 RUSTFLAGS="-Dwarnings" WERROR_CFLAGS='-Werror -Wno-error=deprecated-declarations' ./configure --without-makeinfo --enable-rust-debug --with-x=no --with-ns=no --without-gconf --without-gsettings
     - make -j 3
     - make check
