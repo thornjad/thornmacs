@@ -2,7 +2,7 @@
 
 ### _Emacs, Rust, Spacemacs and more_
 
-![](https://img.shields.io/gitlab/pipeline/thornjad/aero.svg?style=flat-square) ![](https://img.shields.io/github/tag-date/thornjad/aero.svg?colorB=orange&label=version&style=for-the-badge) ![](https://img.shields.io/github/repo-size/thornjad/aero.svg?colorB=green&style=for-the-badge) ![](https://img.shields.io/github/languages/top/thornjad/aero.svg?style=for-the-badge) ![](https://img.shields.io/github/contributors/thornjad/aero.svg?style=for-the-badge) ![](https://img.shields.io/github/license/thornjad/aero.svg?style=for-the-badge)
+![](https://img.shields.io/gitlab/pipeline/thornjad/aero.svg?style=flat-square) ![](https://img.shields.io/github/tag-date/thornjad/aero.svg?colorB=orange&label=version&style=flat-square) ![](https://img.shields.io/github/repo-size/thornjad/aero.svg?colorB=green&style=flat-square) ![](https://img.shields.io/github/languages/top/thornjad/aero.svg?style=flat-square) ![](https://img.shields.io/github/contributors/thornjad/aero.svg?style=flat-square) ![](https://img.shields.io/github/license/thornjad/aero.svg?style=flat-square)
 
 [![Built with Spacemacs](https://cdn.rawgit.com/syl20bnr/spacemacs/442d025779da2f62fc86c2082703697714db6514/assets/spacemacs-badge.svg)](http://spacemacs.org)
 
