@@ -28,8 +28,10 @@ image: ubuntu:18.04
 
 before_script:
   - apt update -qq
-  - DEBIAN_FRONTEND=noninteractive apt install --no-install-recommends -y -qq -o=Dpkg::Use-Pty=0 libc-dev gcc make autoconf automake libncurses-dev gnutls-dev build-essential clang libclang-dev texinfo libjpeg-dev libtiff-dev libgif-dev libxpm-dev libgtk-3-dev libgnutls28-dev libxml2-dev libxt-dev curl
-  - curl http://sh.rustup.rs -sSf | sh
+  - apt install --no-install-recommends -y -qq -o=Dpkg::Use-Pty=0 libc-dev gcc make autoconf automake libncurses-dev gnutls-dev build-essential clang libclang-dev texinfo libjpeg-dev libtiff-dev libgif-dev libxpm-dev libgtk-3-dev libgnutls28-dev libxml2-dev libxt-dev curl
+  - curl http://sh.rustup.rs -sSf -o rustup.sh
+  - sh rustup.sh
+  - rm rustup.sh
   - rustup install $(cat rust-toolchain)
 
 stages:
@@ -41,4 +43,4 @@ test:
     - ./autogen.sh
     - RUST_BACKTRACE=1 RUSTFLAGS="-Dwarnings --features 'strict'" WERROR_CFLAGS='-Werror -Wno-error=deprecated-declarations' ./configure --without-makeinfo --enable-rust-debug --with-x=no --with-ns=no --without-gconf --without-gsettings
     - make -j 3
-    - echo '==> Runnings tests' && make check
+    - make check
