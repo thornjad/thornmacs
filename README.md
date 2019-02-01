@@ -1,6 +1,10 @@
 # aero
 
-### Spacemacs + Emacs + Rust + heavy customization
+### _Emacs, Rust, Spacemacs and more_
+
+![](https://img.shields.io/gitlab/pipeline/thornjad/aero.svg?style=for-the-badge) ![](https://img.shields.io/github/tag-date/thornjad/aero.svg?colorB=orange&label=version&style=for-the-badge) ![](https://img.shields.io/github/repo-size/thornjad/aero.svg?colorB=green&style=for-the-badge) ![](https://img.shields.io/github/languages/top/thornjad/aero.svg?style=for-the-badge) ![](https://img.shields.io/github/contributors/thornjad/aero.svg?style=for-the-badge) ![](https://img.shields.io/github/license/thornjad/aero.svg?style=for-the-badge)
+
+[![Built with Spacemacs](https://cdn.rawgit.com/syl20bnr/spacemacs/442d025779da2f62fc86c2082703697714db6514/assets/spacemacs-badge.svg)](http://spacemacs.org)
 
 <!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
 **Table of Contents**
@@ -235,12 +239,16 @@ it.
 
 # Contributing
 
+![](https://img.shields.io/github/contributors/thornjad/aero.svg?style=for-the-badge)
+
 Pull requests are welcome, but keep in mind the target audience
 here. Your contribution is likely to have more impact in
 [Remacs](https://github.com/Wilfred/remacs) or
 [Spacemacs](https://github.com/syl20bnr/spacemacs).
 
 # License
+
+![](https://img.shields.io/github/license/thornjad/aero.svg?style=for-the-badge)
 
 aero is covered under a GPLv3 License, exactly the same as its
 constituent software, [GNU
