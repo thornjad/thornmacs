@@ -1,34 +1,38 @@
-# Lambda
+# aero
 
-### Spacemacs + Emacs + Rust + heavy customization
+### _Emacs, Rust, Spacemacs and more_
+
+![](https://img.shields.io/gitlab/pipeline/thornjad/aero.svg?style=for-the-badge) ![](https://img.shields.io/github/tag-date/thornjad/aero.svg?colorB=orange&label=version&style=for-the-badge) ![](https://img.shields.io/github/repo-size/thornjad/aero.svg?colorB=green&style=for-the-badge) ![](https://img.shields.io/github/languages/top/thornjad/aero.svg?style=for-the-badge) ![](https://img.shields.io/github/contributors/thornjad/aero.svg?style=for-the-badge) ![](https://img.shields.io/github/license/thornjad/aero.svg?style=for-the-badge)
+
+[![Built with Spacemacs](https://cdn.rawgit.com/syl20bnr/spacemacs/442d025779da2f62fc86c2082703697714db6514/assets/spacemacs-badge.svg)](http://spacemacs.org)
 
 <!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
 **Table of Contents**
 
-- [What Lambda Is](#what-lambda-is)
-- [What Lambda Is Not](#what-lambda-is-not)
-- [Difference With Remacs+Spacemacs](#difference-with-lambdaspacemacs)
+- [What aero Is](#what-aero-is)
+- [What aero Is Not](#what-aero-is-not)
+- [Difference With Remacs+Spacemacs](#difference-with-aerospacemacs)
 - [Tailored Use-Cases](#tailored-use-cases)
 - [Why Emacs?](#why-emacs)
-- [Why Remacs?](#why-lambda)
+- [Why Remacs?](#why-aero)
 - [Why Spacemacs?](#why-spacemacs)
 - [Getting Started](#getting-started)
     - [Requirements](#requirements)
     - [Dockerized development environment](#dockerized-development-environment)
-    - [Building Lambda](#building-lambda)
-    - [Running Lambda](#running-lambda)
+    - [Building aero](#building-aero)
+    - [Running aero](#running-aero)
 - [Design Goals](#design-goals)
 - [Contributing](#contributing)
 - [License](#license)
 
 <!-- markdown-toc end -->
 
-# What Lambda Is
+# What aero is
 
-Lambda is, simply put, a fusion of Spacemacs and Remacs, yielding a
+aero is, simply put, a fusion of Spacemacs and Remacs, yielding a
 day-to-day editor and reliable sidekick.
 
-Lambda is:
+aero is:
 
 - Emacs at heart
 - Integrated Spacemacs
@@ -37,15 +41,15 @@ Lambda is:
 - Emacs-ily extensible
 - Smaller
 
-# What Lambda Is Not
+# What aero is not
 
-Lambda is not, and is not intended to be, a widespread editor. I
+aero is not, and is not intended to be, a widespread editor. I
 (thornjad) make this for myself and my own use-cases. While I try to
-leave it open for extensiblity via Emacs Lisp, Lambda cannot be
+leave it open for extensiblity via Emacs Lisp, aero cannot be
 counted on to have all the bells and whistles that come with GNU
 Emacs.
 
-Lambda is not:
+aero is not:
 
 - Intended for mass use
 - Supportive of things I (thornjad) don't like
@@ -54,7 +58,7 @@ Lambda is not:
 
 # Difference With Remacs+Spacemacs
 
-Lambda is a fusion of Remacs and Spacemacs, but goes further. Lambda:
+aero is a fusion of Remacs and Spacemacs, but goes further. Lambda:
 
 - Is smaller
 - Does not support the NT kernel
@@ -64,7 +68,7 @@ Lambda is a fusion of Remacs and Spacemacs, but goes further. Lambda:
 
 # Tailored Use-Cases
 
-Lambda is tailored to the use-case of my (thornjad) life. As such, it
+aero is tailored to the use-case of my (thornjad) life. As such, it
 is designed with these uses in mind:
 
 - TCL backend and Apache Rivet frontend
@@ -111,7 +115,7 @@ information.
 
 # Why Spacemacs?
 
-Spacemacs is a beautiful and thriving project that provides Lambda
+Spacemacs is a beautiful and thriving project that provides aero
 with two major benefits:
 
 *Key bindings*
@@ -183,14 +187,14 @@ the PWD environment variable before calling the command like so:
 PWD=$(pwd) docker-compose up -d
 ```
 
-The working directory with lambda will be mounted under the same path
+The working directory with aero will be mounted under the same path
 in the container so editing the files on your host machine will
-automatically be reflected inside the container. To build lambda use
-the steps from [Building Lambda](#building-lambda) prefixed with
-`docker-compose exec lambda`, this will ensure the commands are
+automatically be reflected inside the container. To build aero use
+the steps from [Building aero](#building-aero) prefixed with
+`docker-compose exec aero`, this will ensure the commands are
 executed inside the container.
 
-## Building Lambda
+## Building aero
 
 ```
 $ ./autogen.sh
@@ -209,31 +213,33 @@ For example:
 $ make CARGO_FLAGS="-vv" RUSTFLAGS="-Zunstable-options --cfg MARKER_DEBUG"
 ```
 
-## Running Lambda
+## Running aero
 
-You can now run your shiny new Lambda build!
+You can now run your shiny new aero build!
 
 ```bash
-# Using -q to ignore your .emacs.d, so Lambda starts up quickly.
+# Using -q to ignore your .emacs.d, so aero starts up quickly.
 # RUST_BACKTRACE is optional, but useful if your instance crashes.
-$ RUST_BACKTRACE=1 src/lambda -q
+$ RUST_BACKTRACE=1 src/aero -q
 ```
 
 # Design Goals
 
-*Tailored experience*: Lambda is highly tailored to me
+*Tailored experience*: aero is highly tailored to me
 (thornjad). This is the primary purpose of this project; if you think
 this is dumb, I encourage you to fork this project and build it the
 way you want.
 
 *Documentation*: Emacs and Spacemacs have a culture of great
-documentation. Lambda should be no different.
+documentation. aero should be no different.
 
-*Power of Rust*: Through Remacs, Lambda should benefit from the
+*Power of Rust*: Through Remacs, aero should benefit from the
 performance and robustness of Rust, and the ecosystem that comes with
 it.
 
 # Contributing
+
+![](https://img.shields.io/github/contributors/thornjad/aero.svg?style=for-the-badge)
 
 Pull requests are welcome, but keep in mind the target audience
 here. Your contribution is likely to have more impact in
@@ -242,7 +248,9 @@ here. Your contribution is likely to have more impact in
 
 # License
 
-Lambda is covered under a GPLv3 License, exactly the same as its
+![](https://img.shields.io/github/license/thornjad/aero.svg?style=for-the-badge)
+
+aero is covered under a GPLv3 License, exactly the same as its
 constituent software, [GNU
 Emacs](https://www.gnu.org/software/emacs/),
 [Remacs](https://github.com/Wilfred/remacs) and

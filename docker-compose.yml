@@ -1,11 +1,11 @@
 version: '2'
 
 services:
-  lambda:
+  aero:
     build:
       context: .
       dockerfile: docker/ubuntu/Dockerfile
-    image: lambda-build:latest
+    image: aero-build:latest
     working_dir: ${PWD}
     tty: true
     # Unfortunately dumping doesn't work without this
