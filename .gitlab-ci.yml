@@ -28,7 +28,7 @@ image: ubuntu:18.04
 
 before_script:
   - apt update -qq
-  - apt install --no-install-recommends -y -qq -o=Dpkg::Use-Pty=0 libc-dev gcc make autoconf automake libncurses-dev gnutls-dev build-essential clang libclang-dev texinfo libjpeg-dev libtiff-dev libgif-dev libxpm-dev libgtk-3-dev libgnutls28-dev libxml2-dev libxt-dev
+  - apt install --no-install-recommends -y -qq -o=Dpkg::Use-Pty=0 libc-dev gcc make autoconf automake libncurses-dev gnutls-dev build-essential clang libclang-dev texinfo libjpeg-dev libtiff-dev libgif-dev libxpm-dev libgtk-3-dev libgnutls28-dev libxml2-dev libxt-dev wget
   - wget -O - http://sh.rustup.rs | sh
   - rustup install $(cat rust-toolchain)
 
