@@ -27,21 +27,41 @@
 # based on Debian
 image: rust:latest
 
-before_script:
-  - apt update -qq
-  - apt install --no-install-recommends -y -qq -o=Dpkg::Use-Pty=0 libc-dev gcc make autoconf automake libncurses-dev gnutls-dev build-essential clang libclang-dev texinfo libjpeg-dev libtiff-dev libgif-dev libxpm-dev libgtk-3-dev libgnutls28-dev libxml2-dev libxt-dev
 
 stages:
+  - build
   - test
 
-test:
-  stage: test
+build:
+  stage: build
   image: rust:latest
+  variables:
+    GIT_STRATEGY: fetch
+  cache:
+    - config.cache
+  before_script:
+    - apt update -qq
+    - apt install --no-install-recommends -y -qq -o=Dpkg::Use-Pty=0 libc-dev gcc make autoconf automake libncurses-dev gnutls-dev build-essential clang libclang-dev texinfo libjpeg-dev libtiff-dev libgif-dev libxpm-dev libgtk-3-dev libgnutls30-dev libxml2-dev libxt-dev
   script:
     - rustc --version && cargo --version && gcc --version
     - ./autogen.sh
     # FIXME lots of errors coming from upstream
     # - RUST_BACKTRACE=1 RUSTFLAGS="-Dwarnings" WERROR_CFLAGS='-Werror -Wno-error=deprecated-declarations' ./configure --without-makeinfo --enable-rust-debug --with-x=no --with-ns=no --without-gconf --without-gsettings
-    - RUST_BACKTRACE=1 RUSTFLAGS="-Dwarnings" WERROR_CFLAGS='-Wno-error=missing-prototypes -Wno-error=deprecated-declarations' ./configure --without-makeinfo --enable-rust-debug --with-x=no --with-ns=no --without-gconf --without-gsettings
+    - RUST_BACKTRACE=1 RUSTFLAGS="-Dwarnings" WERROR_CFLAGS='-Wno-error=missing-prototypes -Wno-error=deprecated-declarations' ./configure --without-makeinfo --enable-rust-debug --with-x=no --with-ns=no --without-gconf --without-gsettings --cache-file=config.cache
     - make -j 3
-    - make check
+  after_script:
+    - if [ -x src/emacs ] ; then ./make-dist --tests --no-update --no-changelog ; fi
+    - mv emacs-* emacs-dist
+    - for f in src/emacs lib-src/*[^.]? {,**/}Makefile etc/charsets/* ; do [ -r emacs-dist/$f ] || ln $f emacs-dist/$f ; done
+  artifacts:
+    paths:
+      - emacs-dist/
+      expire_in: 1 day
+
+test:
+  stage: test
+  image: rust:latest
+  before_script:
+    - apt update -qq
+  script:
+    - make -C emacs-dist/test check
