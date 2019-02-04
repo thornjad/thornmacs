@@ -38,7 +38,8 @@ build:
   variables:
     GIT_STRATEGY: fetch
   cache:
-    - config.cache
+    paths:
+      - config.cache
   before_script:
     - apt update -qq
     - apt install --no-install-recommends -y -qq -o=Dpkg::Use-Pty=0 libc-dev gcc make autoconf automake libncurses-dev gnutls-dev build-essential clang libclang-dev texinfo libjpeg-dev libtiff-dev libgif-dev libxpm-dev libgtk-3-dev libgnutls30-dev libxml2-dev libxt-dev
