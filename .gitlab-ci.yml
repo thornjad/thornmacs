@@ -55,8 +55,8 @@ build:
     - for f in src/emacs lib-src/*[^.]? {,**/}Makefile etc/charsets/* ; do [ -r emacs-dist/$f ] || ln $f emacs-dist/$f ; done
   artifacts:
     paths:
-      - emacs-dist/
-      expire_in: 1 day
+    - emacs-dist/
+    expire_in: 1 day
 
 test:
   stage: test
