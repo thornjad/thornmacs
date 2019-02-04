@@ -162,20 +162,21 @@ SEVERITY-PREDICATE is used to setup
      (should (eq 'flymake-warning (face-at-point)))
      (should-error (flymake-goto-next-error nil nil t)))))
 
-(ert-deftest included-c-header-files ()
-  "Test inclusion of .h header files."
-  (skip-unless (and (executable-find "gcc") (executable-find "make")))
-  (let ((flymake-wrap-around nil))
-    (flymake-tests--with-flymake
-        ("some-problems.h")
-      (flymake-goto-next-error)
-      (should (eq 'flymake-warning (face-at-point)))
-      (flymake-goto-next-error)
-      (should (eq 'flymake-error (face-at-point)))
-      (should-error (flymake-goto-next-error nil nil t)))
-    (flymake-tests--with-flymake
-        ("no-problems.h")
-      (should-error (flymake-goto-next-error nil nil t)))))
+;; FIXME this test is unstable, see bug#32764, disabling for now (2019-02-04)
+;; (ert-deftest included-c-header-files ()
+;;   "Test inclusion of .h header files."
+;;   (skip-unless (and (executable-find "gcc") (executable-find "make")))
+;;   (let ((flymake-wrap-around nil))
+;;     (flymake-tests--with-flymake
+;;         ("some-problems.h")
+;;       (flymake-goto-next-error)
+;;       (should (eq 'flymake-warning (face-at-point)))
+;;       (flymake-goto-next-error)
+;;       (should (eq 'flymake-error (face-at-point)))
+;;       (should-error (flymake-goto-next-error nil nil t)))
+;;     (flymake-tests--with-flymake
+;;         ("no-problems.h")
+;;       (should-error (flymake-goto-next-error nil nil t)))))
 
 (defmacro flymake-tests--assert-set (set
                                      should
