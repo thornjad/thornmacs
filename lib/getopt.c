@@ -45,7 +45,7 @@
 # define _(msgid) gettext (msgid)
 /* When used standalone, flockfile and funlockfile might not be
    available.  */
-# if (!defined _POSIX_THREAD_SAFE_FUNCTIONS
+# if (!defined _POSIX_THREAD_SAFE_FUNCTIONS)
 #  define flockfile(fp) /* nop */
 #  define funlockfile(fp) /* nop */
 # endif

@@ -114,7 +114,6 @@ pipe2 (int fd[2], int flags)
 
   return 0;
 
-#if GNULIB_defined_O_NONBLOCK
  fail:
   {
     int saved_errno = errno;
@@ -125,5 +124,4 @@ pipe2 (int fd[2], int flags)
     errno = saved_errno;
     return -1;
   }
-#endif
 }
