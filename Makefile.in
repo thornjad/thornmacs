@@ -58,7 +58,7 @@
 # make docs
 #      Make Emacs documentation files from their sources; requires makeinfo.
 #
-# make check (or check-expensive or check-all)
+# make check (or check-expensive or check-all or test)
 #      Run the Emacs test suite.
 #      check-expensive includes additional tests that can be slow.
 #      check-all runs all tests, including ones that can be slow, or
@@ -917,7 +917,7 @@ have-tests:
 	fi
 
 .PHONY: check check-maybe check-expensive check-all
-check check-maybe check-expensive check-all: have-tests all
+check check-maybe check-expensive check-all test: have-tests all
 	$(MAKE) -C src $@
 	$(MAKE) -C test $@
 
