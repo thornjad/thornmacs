@@ -43,7 +43,7 @@ build:
     - rustup component add rustfmt-preview
     - rustc --version && cargo --version && gcc --version
     - ./autogen.sh autoconf
-    - RUST_BACKTRACE=1 RUSTFLAGS="-Dwarnings" ./configure --prefix=$HOME/aero --without-makeinfo --with-file-notification=gfile --enable-rust-debug --with-x=no --with-ns=no --without-gconf --without-gsettings
+    - RUST_BACKTRACE=1 RUSTFLAGS="-Dwarnings" ./configure --prefix=/builds/thornjad/aero --without-makeinfo --with-file-notification=gfile --enable-rust-debug --with-x=no --with-ns=no --without-gconf --without-gsettings
   script:
     - make bootstrap
     - make check-expensive
