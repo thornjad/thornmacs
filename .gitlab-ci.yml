@@ -55,12 +55,6 @@ test-all:
   script:
     - make check
 
-build:
-  stage: test-expensive
-  script:
-    - make bootstrap
-    - make check-expensive
-
 test-filenotify-gio:
   stage: test
   # This tests file monitor libraries gfilemonitor and gio.
@@ -77,3 +71,9 @@ test-filenotify-gio:
     - ./configure --without-makeinfo --with-file-notification=gfile
     - make bootstrap
     - make -C test filenotify-tests
+
+test-expensive:
+  stage: test-expensive
+  script:
+    - make bootstrap
+    - make check-expensive
