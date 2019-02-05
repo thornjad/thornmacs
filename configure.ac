@@ -3553,38 +3553,56 @@ AC_DEFUN([tputs_link_source], [
 	  return 0;
        }]])
 ])
+
 # Check this now, so that we will NOT find the above functions in ncurses.
 # That is because we have not set up to link ncurses in lib-src.
 # It's better to believe a function is not available
 # than to expect to find it in ncurses.
 # Also we need tputs and friends to be able to build at all.
-AC_CACHE_CHECK([for library containing tputs], [emacs_cv_tputs_lib],
-# curses precedes termcap because of AIX (Bug#9736#35) and OpenIndiana.
-for tputs_library in '' tinfo ncurses terminfo curses termcap; do
+AC_MSG_CHECKING([for library containing tputs])
+# Run a test program that contains a call to tputs, a call that is
+# never executed.  This tests whether a pre-'main' dynamic linker
+# works with the library.  It's too much trouble to actually call
+# tputs in the test program, due to portability hassles.  When
+# cross-compiling, assume the test program will run if it links.
+AC_DEFUN([tputs_link_source], [
+  AC_LANG_SOURCE(
+     [[extern void tputs (const char *, int, int (*)(int));
+       int main (int argc, char **argv)
+       {
+	  if (argc == 10000)
+	    tputs (argv[0], 0, 0);
+	  return 0;
+       }]])
+])
+# Maybe curses should be tried earlier?
+# See http://debbugs.gnu.org/cgi/bugreport.cgi?bug=9736#35
+for tputs_library in '' tinfo ncurses terminfo termcap curses; do
   OLIBS=$LIBS
   if test -z "$tputs_library"; then
-    emacs_cv_tputs_lib='none required'
+    LIBS_TERMCAP=
+    msg='none required'
   else
-    emacs_cv_tputs_lib=-l$tputs_library
-    LIBS="$emacs_cv_tputs_lib $LIBS"
+    LIBS_TERMCAP=-l$tputs_library
+    msg=$LIBS_TERMCAP
+    LIBS="$LIBS_TERMCAP $LIBS"
   fi
-  AC_RUN_IFELSE([tputs_link_source], [], [emacs_cv_tputs_lib=no],
-    [AC_LINK_IFELSE([tputs_link_source], [], [emacs_cv_tputs_lib=no])])
+  AC_RUN_IFELSE([tputs_link_source], [], [msg=no],
+    [AC_LINK_IFELSE([tputs_link_source], [], [msg=no])])
   LIBS=$OLIBS
-  if test "X$emacs_cv_tputs_lib" != Xno; then
+  if test "X$msg" != Xno; then
     break
   fi
 done
-])
-AS_CASE(["$emacs_cv_tputs_lib"],
-  [no], [AC_MSG_ERROR([The required function 'tputs' was not found in any library.
+AC_MSG_RESULT([$msg])
+if test "X$msg" = Xno; then
+  AC_MSG_ERROR([The required function `tputs' was not found in any library.
 The following libraries were tried (in order):
-  libtinfo, libncurses, libterminfo, libcurses, libtermcap
+  libtinfo, libncurses, libterminfo, libtermcap, libcurses
 Please try installing whichever of these libraries is most appropriate
 for your system, together with its header files.
-For example, a libncurses-dev(el) or similar package.])],
-  [-l*], [LIBS_TERMCAP=$emacs_cv_tputs_lib],
-  [*], [LIBS_TERMCAP=])
+For example, a libncurses-dev(el) or similar package.])
+fi
 
 ## Use termcap instead of terminfo?
 ## Only true for: freebsd < 40000, netbsd < 599002500.
