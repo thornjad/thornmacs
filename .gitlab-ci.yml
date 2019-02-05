@@ -31,11 +31,6 @@ variables:
   GIT_STRATEGY: fetch
   EMACS_EMBA_CI: 1
 
-cache:
-  cargo: true
-  directories:
-    - $HOME/.rustup
-
 stages:
   - build
   - test
