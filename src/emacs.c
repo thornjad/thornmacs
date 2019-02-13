@@ -162,7 +162,6 @@ int daemon_type;
 /* Pipe used to send exit notification to the background daemon parent at
    startup.  */
 static int daemon_pipe[2];
-HANDLE w32_daemon_event;
 
 /* Save argv and argc.  */
 char **initial_argv;

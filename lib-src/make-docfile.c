@@ -47,6 +47,9 @@ along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.  */
 #include <min-max.h>
 #include <unlocked-io.h>
 
+/* Left over from supporting NT, where 'slash' has a wider definition */
+#define IS_SLASH(c) ((c) == '/')
+
 static void scan_file (char *filename);
 static void scan_lisp_file (const char *filename, const char *mode);
 static void scan_c_file (char *filename, const char *mode);

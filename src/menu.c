@@ -162,7 +162,7 @@ ensure_menu_items (int items)
     }
 }
 
-#if (defined USE_GTK || defined HAVE_NS
+#if (defined USE_GTK || defined HAVE_NS)
 
 /* Begin a submenu.  */
 

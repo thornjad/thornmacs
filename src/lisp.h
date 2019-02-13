@@ -94,6 +94,10 @@ typedef long long int EMACS_INT;
 typedef unsigned long long int EMACS_UINT;
 enum { EMACS_INT_WIDTH = LLONG_WIDTH, EMACS_UINT_WIDTH = ULLONG_WIDTH };
 #  define EMACS_INT_MAX LLONG_MAX
+# else
+#  error "INTPTR_MAX too large"
+# endif
+#endif
 
 /* Number of bits to put in each character in the internal representation
    of bool vectors.  This should not vary across implementations.  */
