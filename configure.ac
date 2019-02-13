@@ -3384,13 +3384,13 @@ if test "${with_xml2}" != "no"; then
 	xcsdkdir="" ;;
       esac
     fi
-    CPPFLAGS="$CPPFLAGS -isystem${xcsdkdir}/usr/include/libxml2"
+    CPPFLAGS="$CPPFLAGS -I$xcsdkdir/usr/include/libxml2"
     AC_CHECK_HEADER(libxml/HTMLparser.h,
       [AC_CHECK_DECL(HTML_PARSE_RECOVER, HAVE_LIBXML2=yes, ,
 		     [#include <libxml/HTMLparser.h>])])
     CPPFLAGS="$SAVE_CPPFLAGS"
     if test "${HAVE_LIBXML2}" = "yes"; then
-      LIBXML2_CFLAGS="-isystem${xcsdkdir}/usr/include/libxml2"
+      LIBXML2_CFLAGS="-I'$xcsdkdir/usr/include/libxml2'"
       LIBXML2_LIBS="-lxml2"
     fi
   fi
