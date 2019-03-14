@@ -4,11 +4,12 @@ use remacs_macros::lisp_fn;
 
 use crate::{
     frames::LispFrameRef,
-    lisp::defsubr,
     lisp::{ExternalPtr, LispObject},
     objects::equal,
     remacs_sys::Qwindow_configuration_p,
     remacs_sys::{save_window_data, saved_window},
+    vectors::LispVectorlikeRef,
+    windows::LispWindowRef,
 };
 
 pub type SaveWindowDataRef = ExternalPtr<save_window_data>;
@@ -103,19 +104,15 @@ impl SavedWindowRef {
 
 impl From<LispObject> for SaveWindowDataRef {
     fn from(o: LispObject) -> Self {
-        o.as_window_configuration_or_error()
+        o.as_window_configuration()
+            .unwrap_or_else(|| wrong_type!(Qwindow_configuration_p, o))
     }
 }
 
 impl LispObject {
     pub fn as_window_configuration(self) -> Option<SaveWindowDataRef> {
         self.as_vectorlike()
-            .and_then(|v| v.as_window_configuration())
-    }
-
-    pub fn as_window_configuration_or_error(self) -> SaveWindowDataRef {
-        self.as_window_configuration()
-            .unwrap_or_else(|| wrong_type!(Qwindow_configuration_p, self))
+            .and_then(LispVectorlikeRef::as_window_configuration)
     }
 }
 
@@ -131,7 +128,7 @@ pub fn window_configuration_frame(config: SaveWindowDataRef) -> LispFrameRef {
     let saved_windows = config.saved_windows.as_vector().unwrap();
     let obj = saved_windows.get(0);
     let saved = SavedWindowRef::new(obj.as_vector().unwrap().as_mut() as *mut saved_window);
-    saved.window.as_window_or_error().frame.as_frame_or_error()
+    LispWindowRef::from(saved.window).frame.into()
 }
 
 // Return true if window configurations CONFIGURATION1 and CONFIGURATION2
@@ -150,8 +147,8 @@ pub extern "C" fn compare_window_configurations(
     ignore_positions: bool,
 ) -> bool {
     compare_window_configurations_rust(
-        configuration1.as_window_configuration_or_error(),
-        configuration2.as_window_configuration_or_error(),
+        configuration1.into(),
+        configuration2.into(),
         ignore_positions,
     )
 }

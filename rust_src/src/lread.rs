@@ -5,6 +5,8 @@ use libc;
 use std::ffi::CString;
 use std::ptr;
 
+use errno::errno;
+
 use remacs_macros::lisp_fn;
 
 use crate::{
@@ -14,16 +16,34 @@ use crate::{
         Lisp_Objfwd,
     },
     eval::unbind_to,
-    lisp::{defsubr, LispObject},
+    lisp::LispObject,
     obarray::{intern, intern_c_string_1},
     remacs_sys,
+    remacs_sys::infile,
     remacs_sys::{
-        build_string, read_internal_start, readevalloop, specbind, staticpro, symbol_redirect,
+        block_input, build_string, getc_unlocked, maybe_quit, read_internal_start, readevalloop,
+        specbind, staticpro, symbol_redirect, unblock_input,
     },
     remacs_sys::{globals, EmacsInt},
     remacs_sys::{Qeval_buffer_list, Qnil, Qread_char, Qstandard_output, Qsymbolp},
+    symbols::LispSymbolRef,
     threads::{c_specpdl_index, ThreadState},
 };
+
+#[cfg(target_os = "macos")]
+extern "C" {
+    #[link_name = "\u{1}_clearerr_unlocked"]
+    pub fn clearerr_unlocked(arg1: *mut crate::remacs_sys::FILE);
+}
+
+#[cfg(target_os = "macos")]
+extern "C" {
+    #[link_name = "\u{1}_ferror_unlocked"]
+    pub fn ferror_unlocked(arg1: *mut crate::remacs_sys::FILE) -> ::libc::c_int;
+}
+
+#[cfg(not(target_os = "macos"))]
+use crate::remacs_sys::{clearerr_unlocked, ferror_unlocked};
 
 // Define an "integer variable"; a symbol whose value is forwarded to a
 // C variable of type EMACS_INT.  Sample call (with "xx" to fool make-docfile):
@@ -36,8 +56,8 @@ pub unsafe extern "C" fn defvar_int(
 ) {
     (*i_fwd).ty = Lisp_Fwd_Int;
     (*i_fwd).intvar = address;
-    let sym = intern_c_string_1(namestring, libc::strlen(namestring) as libc::ptrdiff_t)
-        .as_symbol_or_error();
+    let sym: LispSymbolRef =
+        intern_c_string_1(namestring, libc::strlen(namestring) as libc::ptrdiff_t).into();
     sym.set_declared_special(true);
     sym.set_redirect(symbol_redirect::SYMBOL_FORWARDED);
     sym.set_fwd(i_fwd as *mut Lisp_Fwd);
@@ -53,8 +73,8 @@ pub unsafe extern "C" fn defvar_bool(
 ) {
     (*b_fwd).ty = Lisp_Fwd_Bool;
     (*b_fwd).boolvar = address;
-    let sym = intern_c_string_1(namestring, libc::strlen(namestring) as libc::ptrdiff_t)
-        .as_symbol_or_error();
+    let sym: LispSymbolRef =
+        intern_c_string_1(namestring, libc::strlen(namestring) as libc::ptrdiff_t).into();
     sym.set_declared_special(true);
     sym.set_redirect(symbol_redirect::SYMBOL_FORWARDED);
     sym.set_fwd(b_fwd as *mut Lisp_Fwd);
@@ -73,8 +93,8 @@ pub unsafe extern "C" fn defvar_lisp_nopro(
 ) {
     (*o_fwd).ty = Lisp_Fwd_Obj;
     (*o_fwd).objvar = address;
-    let sym = intern_c_string_1(namestring, libc::strlen(namestring) as libc::ptrdiff_t)
-        .as_symbol_or_error();
+    let sym: LispSymbolRef =
+        intern_c_string_1(namestring, libc::strlen(namestring) as libc::ptrdiff_t).into();
     sym.set_declared_special(true);
     sym.set_redirect(symbol_redirect::SYMBOL_FORWARDED);
     sym.set_fwd(o_fwd as *mut Lisp_Fwd);
@@ -112,8 +132,8 @@ pub unsafe fn defvar_kboard_offset(
 ) {
     (*ko_fwd).ty = Lisp_Fwd_Kboard_Obj;
     (*ko_fwd).offset = offset;
-    let sym = intern_c_string_1(namestring, libc::strlen(namestring) as libc::ptrdiff_t)
-        .as_symbol_or_error();
+    let sym: LispSymbolRef =
+        intern_c_string_1(namestring, libc::strlen(namestring) as libc::ptrdiff_t).into();
     sym.set_declared_special(true);
     sym.set_redirect(symbol_redirect::SYMBOL_FORWARDED);
     sym.set_fwd(ko_fwd as *mut Lisp_Fwd);
@@ -138,19 +158,57 @@ pub unsafe fn defvar_per_buffer_offset(
     (*bo_fwd).ty = Lisp_Fwd_Buffer_Obj;
     (*bo_fwd).offset = offset;
     (*bo_fwd).predicate = predicate;
-    let sym = intern_c_string_1(namestring, libc::strlen(namestring) as libc::ptrdiff_t)
-        .as_symbol_or_error();
+    let sym: LispSymbolRef =
+        intern_c_string_1(namestring, libc::strlen(namestring) as libc::ptrdiff_t).into();
     sym.set_declared_special(true);
     sym.set_redirect(symbol_redirect::SYMBOL_FORWARDED);
     sym.set_fwd(bo_fwd as *mut Lisp_Fwd);
     let local = offset.apply_mut(&mut remacs_sys::buffer_local_symbols);
-    *local = LispObject::from(sym);
+    *local = sym.into();
     let flags = offset.apply(&remacs_sys::buffer_local_flags);
     if flags.is_nil() {
         panic!(
             "Did a DEFVAR_PER_BUFFER without initializing
              the corresponding slot of buffer_local_flags."
         );
+    }
+}
+
+/// Read a byte from stdio. If it has lookahead, use the stored value.
+/// If read over network is interrupted, keep trying until read succeeds.
+#[no_mangle]
+pub unsafe extern "C" fn readbyte_from_stdio() -> i32 {
+    let file = &mut *infile;
+
+    // If infile has lookahead, use stored value
+    if file.lookahead > 0 {
+        file.lookahead -= 1;
+        return file.buf[file.lookahead as usize].into();
+    }
+
+    let instream = file.stream;
+
+    block_input();
+
+    // Interrupted read have been observed while reading over the network.
+    let c = loop {
+        let c = getc_unlocked(instream);
+        if c == libc::EOF && errno().0 == libc::EINTR && ferror_unlocked(instream) > 0 {
+            unblock_input();
+            maybe_quit();
+            block_input();
+            clearerr_unlocked(instream);
+        } else {
+            break c;
+        }
+    };
+
+    unblock_input();
+
+    if c != libc::EOF {
+        c
+    } else {
+        -1
     }
 }
 
@@ -183,12 +241,21 @@ pub fn read(stream: LispObject) -> LispObject {
 
     if input.is_t() || input.eq(Qread_char) {
         let cs = CString::new("Lisp expression: ").unwrap();
-        call!(LispObject::from(intern("read-minibuffer")), unsafe {
+        call!(intern("read-minibuffer").into(), unsafe {
             build_string(cs.as_ptr())
         })
     } else {
         unsafe { read_internal_start(input, Qnil, Qnil) }
     }
+}
+
+/// Don't use this yourself.
+#[lisp_fn]
+pub fn get_file_char() -> EmacsInt {
+    if unsafe { infile }.is_null() {
+        error!("get-file-char misused");
+    }
+    unsafe { readbyte_from_stdio().into() }
 }
 
 /// Execute the region as Lisp code.
@@ -203,7 +270,7 @@ pub fn read(stream: LispObject) -> LispObject {
 /// which is the input stream for reading characters.
 ///
 /// This function does not move point.
-#[lisp_fn(min = "2")]
+#[lisp_fn(min = "2", intspec = "r")]
 pub fn eval_region(
     start: LispObject,
     end: LispObject,
@@ -212,7 +279,7 @@ pub fn eval_region(
 ) {
     // FIXME: Do the eval-sexp-add-defvars dance!
     let count = c_specpdl_index();
-    let cur_buf = ThreadState::current_buffer();
+    let cur_buf = ThreadState::current_buffer_unchecked();
     let cur_buf_obj = cur_buf.into();
 
     let tem = if printflag.is_nil() {

@@ -2,24 +2,27 @@
 use libc;
 
 use remacs_macros::lisp_fn;
+use std::convert::Into;
 
 use crate::{
     buffers::{current_buffer, get_buffer, LispBufferOrName, LispBufferRef},
-    lisp::defsubr,
+    eval::run_hook_with_args_until_success,
     lisp::{ExternalPtr, LispObject, ProcessIter},
     lists::{assoc, car, cdr, plist_put},
     multibyte::LispStringRef,
     remacs_sys::{
-        add_process_read_fd, current_thread, delete_read_fd, emacs_get_tty_pgrp,
-        get_process as cget_process, list_system_processes, send_process,
-        setup_process_coding_systems, update_status, Fmapcar, STRING_BYTES,
+        add_process_read_fd, current_thread, delete_read_fd, emacs_get_tty_pgrp, list1,
+        list_system_processes, process_send_signal, send_process, setup_process_coding_systems,
+        update_status, Fmapcar, STRING_BYTES,
     },
     remacs_sys::{pvec_type, EmacsInt, Lisp_Process, Lisp_Type, Vprocess_alist},
     remacs_sys::{
-        QCbuffer, QCfilter, QCsentinel, Qcdr, Qclosed, Qexit, Qinternal_default_process_filter,
-        Qinternal_default_process_sentinel, Qlisten, Qlistp, Qnetwork, Qnil, Qopen, Qpipe,
-        Qprocessp, Qreal, Qrun, Qserial, Qstop, Qt,
+        QCbuffer, QCfilter, QCsentinel, Qcdr, Qclosed, Qexit, Qinternal_default_interrupt_process,
+        Qinternal_default_process_filter, Qinternal_default_process_sentinel,
+        Qinterrupt_process_functions, Qlisten, Qlistp, Qnetwork, Qnil, Qopen, Qpipe, Qprocessp,
+        Qreal, Qrun, Qserial, Qstop, Qt,
     },
+    vectors::LispVectorlikeRef,
 };
 
 pub type LispProcessRef = ExternalPtr<Lisp_Process>;
@@ -33,8 +36,8 @@ impl LispProcessRef {
         self.plist = plist;
     }
 
-    fn set_buffer(&mut self, buffer: LispObject) {
-        self.buffer = buffer;
+    fn set_buffer(&mut self, buffer: Option<LispBufferRef>) {
+        self.buffer = buffer.into();
     }
 
     fn set_childp(&mut self, childp: LispObject) {
@@ -49,18 +52,13 @@ impl LispObject {
     }
 
     pub fn as_process(self) -> Option<LispProcessRef> {
-        self.as_vectorlike().and_then(|v| v.as_process())
-    }
-
-    pub fn as_process_or_error(self) -> LispProcessRef {
-        self.as_process()
-            .unwrap_or_else(|| wrong_type!(Qprocessp, self))
+        self.into()
     }
 }
 
 impl From<LispObject> for LispProcessRef {
     fn from(o: LispObject) -> Self {
-        o.as_process_or_error()
+        o.as_process().unwrap_or_else(|| wrong_type!(Qprocessp, o))
     }
 }
 
@@ -72,7 +70,7 @@ impl From<LispProcessRef> for LispObject {
 
 impl From<LispObject> for Option<LispProcessRef> {
     fn from(o: LispObject) -> Self {
-        o.as_process()
+        o.as_vectorlike().and_then(LispVectorlikeRef::as_process)
     }
 }
 
@@ -94,7 +92,7 @@ pub extern "C" fn get_process(name: LispObject) -> LispObject {
 
         if obj.is_nil() {
             obj = get_buffer(LispBufferOrName::from(name)).map_or_else(
-                || error!("Process {} does not exist", name.as_string_or_error()),
+                || error!("Process {} does not exist", name),
                 LispObject::from,
             );
         }
@@ -119,7 +117,7 @@ pub extern "C" fn get_process(name: LispObject) -> LispObject {
                 Some(proc) => proc.into(),
             }
         }
-        None => proc_or_buf.as_process_or_error().into(),
+        None => LispProcessRef::from(proc_or_buf).into(),
     }
 }
 
@@ -135,7 +133,7 @@ pub fn get_process_lisp(name: LispObject) -> LispObject {
     if name.is_process() {
         name
     } else {
-        name.as_string_or_error();
+        LispStringRef::from(name);
         cdr(assoc(name, unsafe { Vprocess_alist }, Qnil))
     }
 }
@@ -173,7 +171,7 @@ pub fn process_id(process: LispProcessRef) -> Option<EmacsInt> {
 /// deleted or killed.
 #[lisp_fn]
 pub fn get_buffer_process(buffer_or_name: Option<LispBufferOrName>) -> Option<LispProcessRef> {
-    get_buffer_process_internal(buffer_or_name.and_then(|b| b.into()))
+    get_buffer_process_internal(buffer_or_name.and_then(Into::into))
 }
 
 pub fn get_buffer_process_internal(buffer: Option<LispBufferRef>) -> Option<LispProcessRef> {
@@ -240,10 +238,9 @@ pub fn process_plist(process: LispProcessRef) -> LispObject {
 
 /// Replace the plist of PROCESS with PLIST.  Return PLIST.
 #[lisp_fn]
-pub fn set_process_plist(process: LispObject, plist: LispObject) -> LispObject {
+pub fn set_process_plist(mut process: LispProcessRef, plist: LispObject) -> LispObject {
     if plist.is_list() {
-        let mut p = process.as_process_or_error();
-        p.set_plist(plist);
+        process.set_plist(plist);
         plist
     } else {
         wrong_type!(Qlistp, plist)
@@ -266,21 +263,17 @@ pub fn set_process_plist(process: LispObject, plist: LispObject) -> LispObject {
 /// nil, indicating the current buffer's process.
 #[lisp_fn]
 pub fn process_status(process: LispObject) -> LispObject {
-    let p = if process.is_string() {
-        get_process(process)
-    } else {
-        unsafe { cget_process(process) }
+    let mut process = match get_process(process) {
+        Qnil => return process,
+        p => LispProcessRef::from(p),
     };
-    if p.is_nil() {
-        return p;
-    }
-    let mut process = p.as_process_or_error();
+
     if process.raw_status_new() {
         unsafe { update_status(process.as_mut()) };
     }
     let mut status = process.status;
-    if let Some(c) = status.as_cons() {
-        status = c.car();
+    if let Some((a, _)) = status.into() {
+        status = a;
     };
     let process_type = process.ptype();
     if process_type.eq(Qnetwork) || process_type.eq(Qserial) || process_type.eq(Qpipe) {
@@ -315,30 +308,29 @@ pub fn process_thread(process: LispProcessRef) -> LispObject {
 /// nil, indicating the current buffer's process.
 #[lisp_fn]
 pub fn process_type(process: LispObject) -> LispObject {
-    let p_ref = get_process(process).as_process_or_error();
+    let p_ref: LispProcessRef = get_process(process).into();
     p_ref.ptype()
 }
 
 /// Set buffer associated with PROCESS to BUFFER (a buffer, or nil).
 /// Return BUFFER.
 #[lisp_fn]
-pub fn set_process_buffer(process: LispObject, buffer: LispObject) -> LispObject {
-    let mut p_ref = process.as_process_or_error();
-    if buffer.is_not_nil() {
-        buffer.as_buffer_or_error();
-    }
-    p_ref.set_buffer(buffer);
-    let process_type = p_ref.ptype();
+pub fn set_process_buffer(
+    mut process: LispProcessRef,
+    buffer: Option<LispBufferRef>,
+) -> LispObject {
+    process.set_buffer(buffer);
+    let process_type = process.ptype();
     let netconn1_p = process_type.eq(Qnetwork);
     let serialconn1_p = process_type.eq(Qserial);
     let pipeconn1_p = process_type.eq(Qpipe);
 
     if netconn1_p || serialconn1_p || pipeconn1_p {
-        let childp = p_ref.childp;
-        p_ref.set_childp(plist_put(childp, QCbuffer, buffer));
+        let childp = process.childp;
+        process.set_childp(plist_put(childp, QCbuffer, buffer.into()));
     }
-    unsafe { setup_process_coding_systems(process) };
-    buffer
+    unsafe { setup_process_coding_systems(process.into()) };
+    buffer.into()
 }
 
 /// Give PROCESS the filter function FILTER; nil means default.
@@ -353,9 +345,7 @@ pub fn set_process_buffer(process: LispObject, buffer: LispObject) -> LispObject
 /// - if the process's input coding system is no-conversion or raw-text,
 ///   it is a unibyte string (the non-converted input).
 #[lisp_fn]
-pub fn set_process_filter(process: LispObject, mut filter: LispObject) -> LispObject {
-    let mut p_ref = process.as_process_or_error();
-
+pub fn set_process_filter(mut process: LispProcessRef, mut filter: LispObject) -> LispObject {
     // Don't signal an error if the process's input file descriptor
     // is closed.  This could make debugging Lisp more difficult,
     // for example when doing something like
@@ -363,19 +353,19 @@ pub fn set_process_filter(process: LispObject, mut filter: LispObject) -> LispOb
     // (setq process (start-process ...))
     // (debug)
     // (set-process-filter process ...)
-    filter = pset_filter(p_ref, filter);
-    set_process_filter_masks(p_ref);
+    filter = pset_filter(process, filter);
+    set_process_filter_masks(process);
 
-    let process_type = p_ref.ptype();
+    let process_type = process.ptype();
     let netconn1_p = process_type.eq(Qnetwork);
     let serialconn1_p = process_type.eq(Qserial);
     let pipeconn1_p = process_type.eq(Qpipe);
 
     if netconn1_p || serialconn1_p || pipeconn1_p {
-        let childp = p_ref.childp;
-        p_ref.set_childp(plist_put(childp, QCfilter, filter));
+        let childp = process.childp;
+        process.set_childp(plist_put(childp, QCfilter, filter));
     }
-    unsafe { setup_process_coding_systems(process) };
+    unsafe { setup_process_coding_systems(process.into()) };
     filter
 }
 
@@ -441,7 +431,7 @@ fn pset_sentinel(mut process: LispProcessRef, val: LispObject) -> LispObject {
 pub fn process_send_string(process: LispObject, mut string: LispStringRef) {
     unsafe {
         send_process(
-            cget_process(process),
+            get_process(process),
             string.u.s.data as *mut libc::c_char,
             STRING_BYTES(string.as_mut()),
             string.into(),
@@ -488,9 +478,10 @@ pub fn process_exit_status(mut process: LispProcessRef) -> LispObject {
         unsafe { update_status(process.as_mut()) };
     }
     let status = process.status;
-    status
-        .as_cons()
-        .map_or_else(|| LispObject::from(0), |cons| car(cons.cdr()))
+    match status.into() {
+        None => 0.into(),
+        Some((_, d)) => car(d),
+    }
 }
 
 /// Return non-nil if PROCESS has given the terminal to a
@@ -502,19 +493,13 @@ pub fn process_running_child_p(mut process: LispObject) -> LispObject {
     // Initialize in case ioctl doesn't exist or gives an error,
     // in a way that will cause returning t.
     process = get_process(process);
-    let mut proc_ref = process.as_process_or_error();
+    let mut proc_ref: LispProcessRef = process.into();
 
     if !proc_ref.ptype().eq(Qreal) {
-        error!(
-            "Process {} is not a subprocess.",
-            proc_ref.name.as_string_or_error()
-        );
+        error!("Process {} is not a subprocess.", proc_ref.name);
     }
     if proc_ref.infd < 0 {
-        error!(
-            "Process {} is not active.",
-            proc_ref.name.as_string_or_error()
-        );
+        error!("Process {} is not active.", proc_ref.name);
     }
 
     let gid = unsafe { emacs_get_tty_pgrp(proc_ref.as_mut()) };
@@ -535,6 +520,52 @@ pub fn process_running_child_p(mut process: LispObject) -> LispObject {
 #[lisp_fn(name = "list-system-processes", c_name = "list_system_processes")]
 pub fn list_system_processes_lisp() -> LispObject {
     unsafe { list_system_processes() }
+}
+
+/// Interrupt process PROCESS
+/// PROCESS may be a process, a buffer, or the name of a process or buffer.
+/// No arg or nil means current buffer's process.
+/// Second arg CURRENT-GROUP non-nil means send signal to
+/// the current process-group of the process's controlling terminal
+/// rather than to the process's own process group.
+/// If the process is a shell, this means interrupt current subjob
+/// rather than the shell.
+///
+/// If CURRENT-GROUP is `lambda', and if the shell owns the terminal,
+/// don't send the signal.
+///
+/// This function calls the functions of `interrupt-process-functions' in
+/// the order of the list, until one of them returns non-`nil'.
+#[lisp_fn(min = "0")]
+pub fn interrupt_process(process: LispObject, current_group: LispObject) -> LispObject {
+    run_hook_with_args_until_success(&mut [Qinterrupt_process_functions, process, current_group])
+}
+def_lisp_sym!(Qinterrupt_process_functions, "interrupt-process-functions");
+
+/// Default function to interrupt process PROCESS.
+/// It shall be the last element in list `interrupt-process-functions'.
+/// See function `interrupt-process' for more details on usage.
+#[lisp_fn(min = "0")]
+pub fn internal_default_interrupt_process(
+    process: LispObject,
+    current_group: LispObject,
+) -> LispObject {
+    unsafe {
+        process_send_signal(process, libc::SIGINT, current_group, false);
+    }
+    process
+}
+#[rustfmt::skip]
+def_lisp_sym!(Qinternal_default_interrupt_process, "internal-default-interrupt-process");
+
+#[no_mangle]
+pub extern "C" fn rust_syms_of_process() {
+    /// List of functions to be called for `interrupt-process'.
+    /// The arguments of the functions are the same as for `interrupt-process'.
+    /// These functions are called in the order of the list, until one of them
+    /// returns non-`nil'.
+    #[rustfmt::skip]
+    defvar_lisp!(Vinterrupt_process_functions, "interrupt-process-functions", list1(Qinternal_default_interrupt_process));
 }
 
 include!(concat!(env!("OUT_DIR"), "/process_exports.rs"));

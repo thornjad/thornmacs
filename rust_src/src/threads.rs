@@ -8,12 +8,12 @@ use remacs_macros::lisp_fn;
 
 use crate::{
     buffers::LispBufferRef,
-    lisp::defsubr,
     lisp::{ExternalPtr, LispObject},
     remacs_sys::Qthreadp,
     remacs_sys::{
         current_thread as current_thread_pointer, pvec_type, thread_state, Lisp_Type, SPECPDL_INDEX,
     },
+    vectors::LispVectorlikeRef,
 };
 
 pub type ThreadStateRef = ExternalPtr<thread_state>;
@@ -21,8 +21,14 @@ pub type ThreadStateRef = ExternalPtr<thread_state>;
 pub struct ThreadState {}
 
 impl ThreadState {
-    pub fn current_buffer() -> LispBufferRef {
+    pub fn current_buffer_unchecked() -> LispBufferRef {
         unsafe { mem::transmute((*current_thread_pointer).m_current_buffer) }
+    }
+
+    pub fn current_buffer() -> Option<LispBufferRef> {
+        unsafe {
+            LispBufferRef::from_ptr((*current_thread_pointer).m_current_buffer as *mut libc::c_void)
+        }
     }
 
     pub fn current_thread() -> ThreadStateRef {
@@ -42,7 +48,7 @@ impl ThreadStateRef {
 
 impl From<LispObject> for ThreadStateRef {
     fn from(o: LispObject) -> Self {
-        o.as_thread_or_error()
+        o.as_thread().unwrap_or_else(|| wrong_type!(Qthreadp, o))
     }
 }
 
@@ -59,12 +65,7 @@ impl LispObject {
     }
 
     pub fn as_thread(self) -> Option<ThreadStateRef> {
-        self.as_vectorlike().and_then(|v| v.as_thread())
-    }
-
-    pub fn as_thread_or_error(self) -> ThreadStateRef {
-        self.as_thread()
-            .unwrap_or_else(|| wrong_type!(Qthreadp, self))
+        self.as_vectorlike().and_then(LispVectorlikeRef::as_thread)
     }
 }
 

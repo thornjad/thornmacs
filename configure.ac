@@ -365,7 +365,12 @@ OPTION_DEFAULT_OFF([w32], [use native MS Windows GUI in a Cygwin build])
 OPTION_DEFAULT_ON([gpm],[don't use -lgpm for mouse support on a GNU/Linux console])
 OPTION_DEFAULT_ON([dbus],[don't compile with D-Bus support])
 AC_ARG_WITH([gconf],[AS_HELP_STRING([--with-gconf],
-[compile with Gconf support (Gsettings replaces this)])],[],[with_gconf=maybe])
+[compile with Gconf support (Gsettings replaces this)])],[],
+[if test $with_features = yes; then
+with_gconf=maybe
+else
+with_gconf=no
+fi])
 OPTION_DEFAULT_ON([gsettings],[don't compile with GSettings support])
 OPTION_DEFAULT_ON([selinux],[don't compile with SELinux support])
 OPTION_DEFAULT_ON([gnutls],[don't use -lgnutls for SSL/TLS support])
@@ -1587,6 +1592,9 @@ pre_PKG_CONFIG_CFLAGS=$CFLAGS
 pre_PKG_CONFIG_LIBS=$LIBS
 
 PKG_PROG_PKG_CONFIG(0.9.0)
+if test x$PKG_CONFIG = x ; then
+  AC_MSG_ERROR([pkg-config not found.])
+fi
 
 dnl EMACS_CHECK_MODULES(GSTUFF, gtk+-2.0 >= 1.3 glib = 1.3.4)
 dnl acts like PKG_CHECK_MODULES(GSTUFF, gtk+-2.0 >= 1.3 glib = 1.3.4,
@@ -3381,6 +3389,24 @@ fi
 AC_SUBST(LCMS2_CFLAGS)
 AC_SUBST(LCMS2_LIBS)
 
+HAVE_ZLIB=no
+LIBZ=
+if test "${with_zlib}" != "no"; then
+  OLIBS=$LIBS
+  AC_SEARCH_LIBS([inflateEnd], [z], [HAVE_ZLIB=yes])
+  LIBS=$OLIBS
+  case $ac_cv_search_inflateEnd in
+    -*) LIBZ=$ac_cv_search_inflateEnd ;;
+  esac
+fi
+if test "${HAVE_ZLIB}" = "yes"; then
+  AC_DEFINE([HAVE_ZLIB], 1, [Define to 1 if you have the zlib library (-lz).])
+  ### mingw32 doesn't use -lz, since it loads the library dynamically.
+  if test "${opsys}" = "mingw32"; then
+     LIBZ=
+  fi
+fi
+
 ### Dynamic modules support
 LIBMODULES=
 HAVE_MODULES=no
@@ -5090,6 +5116,11 @@ LIB_REMACS="$RUST_DEPS"
 
 LDFLAGS_REMACS="-L../$srcdir/rust_src/target/\${CARGO_BUILD_DIR}"
 
+# On macOS, rand crate needs '_SecRandomCopyBytes' symbol in Security framework.
+if test "${opsys}" = "darwin"; then
+LDFLAGS_REMACS="$LDFLAGS_REMACS -framework Security"
+fi
+
 LDFLAGS="$LDFLAGS $LDFLAGS_REMACS"
 
 AC_SUBST(LIB_REMACS)
@@ -5442,7 +5473,20 @@ if test "$CANNOT_DUMP" != "yes"; then
         CARGO_DEFAULT_FEATURES="${CARGO_DEFAULT_FEATURES}\"unexec\", "
     fi
 fi
-
+if test "$window_system" != "none"; then
+    CARGO_DEFAULT_FEATURES="${CARGO_DEFAULT_FEATURES}\"window-system\", "
+fi
+case "$window_system" in
+    x11)
+        CARGO_DEFAULT_FEATURES="${CARGO_DEFAULT_FEATURES}\"window-system-x11\", "
+    ;;
+    nextstep)
+	CARGO_DEFAULT_FEATURES="${CARGO_DEFAULT_FEATURES}\"window-system-nextstep\", "
+    ;;
+    w32)
+        CARGO_DEFAULT_FEATURES="${CARGO_DEFAULT_FEATURES}\"window-system-w32\", "
+    ;;
+esac
 AC_SUBST(CARGO_DEFAULT_FEATURES)
 AC_CONFIG_FILES([rust_src/Cargo.toml])
 
