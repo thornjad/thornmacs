@@ -1,0 +1,22 @@
+*** Keywords to look out for:
+
+- mingw (mingw32)
+- nt
+- windows-nt
+- cygwin
+- .dll
+- w32 (window system)
+- DOS_NT
+- WINDOWSNT
+- HAVE_W32
+- ms-windows
+- CYGWIN_OBJ
+- W32_OBJ
+- with_w32
+- WIN32_NATIVE (used in XEmacs)
+
+
+*** Dropping support for:
+
+- nt (all)
+- windowing (X, w32)

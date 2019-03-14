@@ -22,6 +22,7 @@
 # file does not rely on "**" in patterns.  The "**" feature was added
 # in Git 1.8.2 (March 2013).
 
+.DS_Store
 
 # Built by 'autogen.sh'.
 /aclocal.m4

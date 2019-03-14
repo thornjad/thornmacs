@@ -1,0 +1,15 @@
+mingw
+nt
+windows
+cygwin
+dll
+w32
+DOS_NT
+DOS
+WINDOWSNT
+NT_GUI
+HAVE_NTGUI
+WIN32
+MSDOS
+DOSMS
+WINDOWS_NATIVE
